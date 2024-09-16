@@ -21,24 +21,19 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Initialize CodeQL
+      id: codeql-init
       uses: github/codeql-action/init@v3
       with:
         languages: csharp
         db-location: './db'
         source-root: './test_assemblies/dotnet8'
     
-    - name: Analyze
-      uses: github/codeql-action/analyze@v3
-      with:
-        database: './db'
-        queries: codeqltest
-        fail-on-ql-validation: false
-        fail-on-severity: error
-        output-format: csv
-        output: ${{github.workspace}}/codeql-results.csv
-    
+    - name: Run CodeQL
+      run: ${{ steps.codeql-init.outputs.codeql-path }} query run codeqltest/test.ql -d ./db -o output.bqrs
+    - name: Report
+      run: ${{ steps.codeql-init.outputs.codeql-path }} bqrs decode output
     - name: Upload CodeQL results
       uses: actions/upload-artifact@v4
       with:
         name: codeql-results
-        path: ${{github.workspace}}/codeql-results.csv
+        path: ${{github.workspace}}/output.bqrs
