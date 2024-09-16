@@ -25,7 +25,7 @@ jobs:
       uses: github/codeql-action/init@v3
       with:
         languages: csharp
-        db-location: './db'
+        db-location: '${{ github.workspace }}/db'
         source-root: './test_assemblies/dotnet8'
     
     - name: Run CodeQL
