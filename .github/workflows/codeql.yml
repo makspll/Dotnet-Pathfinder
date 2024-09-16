@@ -38,6 +38,7 @@ jobs:
         output: ${{github.workspace}}/codeql-results.csv
     
     - name: Upload CodeQL results
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: codeql-results
+        path: ${{github.workspace}}/codeql-results.csv
