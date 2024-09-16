@@ -18,21 +18,22 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v2
+      id: codeql-init
+      uses: github/codeql-action/init@v3
       with:
         languages: csharp
-
-    - name: Autobuild
-      uses: github/codeql-action/autobuild@v2
-
-    - name: Run CodeQL Analysis
-      uses: github/codeql-action/analyze@v2
+        source-root: './test_assemblies/dotnet8'
+    - name: Create DB
+      run: ${{ steps.codeql-init.outputs.codeql-path }} database create ./db --language=csharp --source-root=test_assemblies/dotnet8
+    - name: Run CodeQL
+      run: ${{ steps.codeql-init.outputs.codeql-path }} query run codeqltest/test.ql -d ./db -o output.bqrs
+    - name: Report
+      run: ${{ steps.codeql-init.outputs.codeql-path }} bqrs decode output.bqrs
+    - name: Upload CodeQL results
+      uses: actions/upload-artifact@v4
       with:
-        qlpack: codeqltest/qlpack.yml
-        additional_packs: test_assemblies/dotnet8
-
-    - name: Print CodeQL Results
-      run: cat /home/runner/work/_temp/codeql-analysis-results.sarif
+        name: codeql-results
+        path: ${{github.workspace}}/output.bqrs
