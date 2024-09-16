@@ -15,6 +15,6 @@ This repo includes experiments in using dataflow to find all conventional routes
 
 - Download codeql-bundle and add the executable to your path (or use the full path to the executable from now on): https://github.com/github/codeql-action/releases
 - Install the CodeQL extension in VSCode
-- Run `codeql database create . --language=csharp --source-root=test_assemblies/dotnet8` to create the database
+- Run `codeql database create ./db --language=csharp --source-root=test_assemblies/dotnet8` to create the database
 - Open the database and codeql queries in VSCode
 - Launch the test query
