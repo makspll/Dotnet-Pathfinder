@@ -24,13 +24,13 @@ jobs:
       uses: github/codeql-action/init@v3
       with:
         languages: csharp
-        db-location: '.'
+        db-location: './db'
         source-root: './test_assemblies/dotnet8'
     
     - name: Analyze
       uses: github/codeql-action/analyze@v3
       with:
-        database: '.'
+        database: './db'
         queries: codeqltest
         fail-on-ql-validation: false
         fail-on-severity: error
