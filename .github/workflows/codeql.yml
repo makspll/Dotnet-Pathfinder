@@ -27,7 +27,7 @@ jobs:
         languages: csharp
         source-root: './test_assemblies/dotnet8'
     - name: Create DB
-      run: ${{ steps.codeql-init.outputs.codeql-path }} database create . --language=csharp --source-root=test_assemblies/dotnet8
+      run: ${{ steps.codeql-init.outputs.codeql-path }} database create ./db --language=csharp --source-root=test_assemblies/dotnet8
     - name: Run CodeQL
       run: ${{ steps.codeql-init.outputs.codeql-path }} query run codeqltest/test.ql -d ./db -o output.bqrs
     - name: Report
