@@ -24,13 +24,8 @@ jobs:
       uses: github/codeql-action/init@v3
       with:
         languages: csharp
-        packs: codeqltest/qlpack.yml
-        queries: codeqltest
         db-location: '.'
         source-root: './test_assemblies/dotnet8'
-
-    - name: Autobuild
-      uses: github/codeql-action/autobuild@v3
     
     - name: Analyze
       uses: github/codeql-action/analyze@v3
@@ -39,10 +34,10 @@ jobs:
         queries: codeqltest
         fail-on-ql-validation: false
         fail-on-severity: error
-        output-format: sarif
-        output: ${{github.workspace}}/codeql-results.sarif
+        output-format: csv
+        output: ${{github.workspace}}/codeql-results.csv
     
-    - name: Upload SARIF results
-      uses: github/codeql-action/upload-sarif@v3
+    - name: Upload CodeQL results
+      uses: actions/upload-artifact@v2
       with:
-        sarif_file: ${{github.workspace}}/codeql-results.sarif
+        name: codeql-results
