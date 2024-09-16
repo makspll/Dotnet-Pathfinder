@@ -21,18 +21,28 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v2
+      uses: github/codeql-action/init@v3
       with:
         languages: csharp
+        packs: codeqltest/qlpack.yml
+        queries: codeqltest
+        db-location: '.'
+        source-root: './test_assemblies/dotnet8'
 
     - name: Autobuild
-      uses: github/codeql-action/autobuild@v2
-
-    - name: Run CodeQL Analysis
-      uses: github/codeql-action/analyze@v2
+      uses: github/codeql-action/autobuild@v3
+    
+    - name: Analyze
+      uses: github/codeql-action/analyze@v3
       with:
-        qlpack: codeqltest/qlpack.yml
-        additional_packs: test_assemblies/dotnet8
-
-    - name: Print CodeQL Results
-      run: cat /home/runner/work/_temp/codeql-analysis-results.sarif
+        database: '.'
+        queries: codeqltest
+        fail-on-ql-validation: false
+        fail-on-severity: error
+        output-format: sarif
+        output: ${{github.workspace}}/codeql-results.sarif
+    
+    - name: Upload SARIF results
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{github.workspace}}/codeql-results.sarif
