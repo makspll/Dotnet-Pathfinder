@@ -25,11 +25,11 @@ jobs:
       uses: github/codeql-action/init@v3
       with:
         languages: csharp
-        db-location: '${{ github.workspace }}/db'
         source-root: './test_assemblies/dotnet8'
-    
+    - name: Create DB
+      run: ${{ steps.codeql-init.outputs.codeql-path }} database create . --language=csharp --source-root=test_assemblies/dotnet8
     - name: Run CodeQL
-      run: ${{ steps.codeql-init.outputs.codeql-path }} query run codeqltest/test.ql -d ./db/csharp -o output.bqrs
+      run: ${{ steps.codeql-init.outputs.codeql-path }} query run codeqltest/test.ql -d ./db -o output.bqrs
     - name: Report
       run: ${{ steps.codeql-init.outputs.codeql-path }} bqrs decode output
     - name: Upload CodeQL results
