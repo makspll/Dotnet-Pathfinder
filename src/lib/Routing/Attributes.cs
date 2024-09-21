@@ -1,18 +1,18 @@
 using System.Text.Json.Serialization;
 
-namespace Makspll.ReflectionUtils.Routing;
+namespace Makspll.Pathfinder.Routing;
 
 public enum RoutePropagation
 {
     /// <summary>
-    /// If an action has no route, will propagate to it and enable routing
+    /// If an action has no route, will propagate to it and enable routing, also propagates to sibling routing attributes with no route (takes precedence over routing attrs at controller level)
     /// </summary>
-    PropagateToActions,
+    Propagate,
 
     /// <summary>
     /// If an action has no route, this will not propagate to it, will only propagate to actions with already existing routes.
     /// </summary>
-    PropagateToRoutedActions,
+    OnlyPropagatedToAlreadyRoutedActions,
 
     /// <summary>
     /// The attribute does not propagate to actions or does not have a route
@@ -20,6 +20,8 @@ public enum RoutePropagation
     None,
 }
 
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum HTTPMethod
 {
     GET,
@@ -28,7 +30,7 @@ public enum HTTPMethod
     DELETE,
     PATCH,
     HEAD,
-    OPTIONS
+    OPTIONS,
 }
 
 /// Tagged union of attributes relating to routing
@@ -74,7 +76,7 @@ public class RouteAttribute(string? path) : RoutingAttribute("Route")
 
     public override string? Route() => Path;
 
-    public override RoutePropagation Propagation() => RoutePropagation.PropagateToActions;
+    public override RoutePropagation Propagation() => RoutePropagation.Propagate;
 }
 
 public class HttpAttribute(HTTPMethod method, string? route) : RoutingAttribute($"Http{char.ToUpper(method.ToString()[0])}{method.ToString()[1..].ToLower()}")

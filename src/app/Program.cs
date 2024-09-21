@@ -1,9 +1,9 @@
 ﻿using System.Text.Json;
 using ANSIConsole;
-using Makspll.ReflectionUtils;
-using Makspll.ReflectionUtils.Routing;
-using Makspll.ReflectionUtils.Search;
-using Makspll.ReflectionUtils.Serialization;
+using Makspll.Pathfinder.Routing;
+using Makspll.Pathfinder.Search;
+using Makspll.Pathfinder.Serialization;
+using Makspll.PathfinderApp;
 
 Args? parsedArgs = null;
 try
@@ -55,9 +55,20 @@ if (parsedArgs.OutputFormat == OutputFormat.Text)
             Console.WriteLine($"Controller: {controller.Name.Color(ConsoleColor.DarkGreen)}");
             foreach (var action in controller.Actions)
             {
+                Console.WriteLine($"  Action: {action.Name.Color(ConsoleColor.DarkGray)}");
                 foreach (var route in action.Routes)
                 {
-                    Console.WriteLine($"  - {action.Name.Color(ConsoleColor.DarkGray)} {route.Color(ConsoleColor.DarkCyan)}");
+                    string methods;
+                    if (route.Methods.Count() == Enum.GetValues<HTTPMethod>().Length)
+                    {
+                        methods = "ALL";
+                    }
+                    else
+                    {
+                        methods = string.Join(',', route.Methods.Select(x => x.ToString()));
+                    }
+
+                    Console.WriteLine($"    {methods.Color(ConsoleColor.DarkGray)} '{route.Path.Color(ConsoleColor.DarkCyan)}'");
                 }
             }
         }

@@ -1,4 +1,4 @@
-namespace Makspll.ReflectionUtils.Routing;
+namespace Makspll.Pathfinder.Routing;
 
 public class Assembly
 {

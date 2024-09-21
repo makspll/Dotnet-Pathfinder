@@ -1,10 +1,10 @@
 using System.Diagnostics;
+using System.Net.Sockets;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
 using FluentAssertions.Execution;
-using Makspll.ReflectionUtils;
-using Makspll.ReflectionUtils.Routing;
+using Makspll.Pathfinder.Routing;
 using static AssemblyTests.AssemblyTestUtils;
 
 namespace AssemblyTests
@@ -133,15 +133,30 @@ namespace AssemblyTests
                 }
             }
         }
+        public static void ExpectPortFree(int port)
+        {
+            using TcpClient tcpClient = new();
+            try
+            {
+                tcpClient.Connect("127.0.0.1", port);
+            }
+            catch (SocketException e)
+            {
+                if (e.SocketErrorCode != SocketError.ConnectionRefused)
+                {
+                    throw;
+                }
+            }
+        }
 
-        public static void RunAssemblyAndGetHTTPOutput<T>(string dllPath, string url, out T? httpOutput)
+        public static Process RunAssembly(string dllPath, int port = 5000)
         {
             var process = new Process
             {
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = "dotnet",
-                    Arguments = $"{dllPath}",
+                    Arguments = $"{dllPath} --urls http://localhost:{port}",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
@@ -155,7 +170,12 @@ namespace AssemblyTests
             process.ErrorDataReceived += (sender, e) => Console.WriteLine(e.Data);
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
+            return process;
+        }
 
+        public static void RunAssemblyAndGetHTTPOutput<T>(string dllPath, string url, out T? httpOutput)
+        {
+            var process = RunAssembly(dllPath);
             // wait for the process to start and call the `api/allroutes` endpoint
             httpOutput = WaitUntillEndpointAndCall<T>(url);
             // shut down the process
@@ -168,8 +188,15 @@ namespace AssemblyTests
             var scope = AssertionScope.Current;
             if (expected == null && received != null)
             {
-                scope.FailWith($"Controller {received.Name} is not expected to be routable");
-                return;
+                if (received.Actions.Any())
+                {
+                    scope.FailWith($"Controller {received.Name} is not expected to contain any routes");
+                    return;
+                }
+                else
+                {
+                    return;
+                }
             }
 
             var controller = expected?.ControllerMethod?.Split(":")[0] ?? expected?.Action;
@@ -195,12 +222,55 @@ namespace AssemblyTests
             }
 
             // the route should match one of the expected routes
-            if (!receivedMethod.Routes.Contains(expected!.Route))
+            if (!receivedMethod.Routes.Any(r => r.Path == expected!.Route))
             {
-                scope.FailWith($"{received.Namespace}::{received.Name} - {receivedMethod.Routes} was expected to contain {expected!.Route}");
+                var allRoutesString = string.Join(", ", receivedMethod.Routes.Select(r => r.Path));
+                scope.FailWith($"{received.Namespace}::{received.Name} - '[{allRoutesString}]' was expected to contain {expected!.Route}");
             }
+        }
 
+        public static void AssertActionAllowedMethods(string controller, Makspll.Pathfinder.Routing.Action action, string host, IEnumerable<HTTPMethod> methodsFromOtherActions)
+        {
+            // call action with all methods
+            var scope = AssertionScope.Current;
 
+            foreach (var route in action.Routes)
+            {
+                foreach (var method in Enum.GetValues<HTTPMethod>())
+                {
+                    var url = $"{host}{route.Path}";
+                    var client = new HttpClient();
+                    var message = new HttpRequestMessage
+                    {
+                        Method = HttpMethod.Parse(method.ToString()),
+                        RequestUri = new Uri(url)
+                    };
+                    HttpResponseMessage response;
+                    try
+                    {
+                        response = client.Send(message);
+                    }
+                    catch (Exception e)
+                    {
+                        scope.FailWith($"Controller: '{controller}' Action: '{action.Name}' Route: '{route.Path}' could not call endpoint due to failure: {e.Message}");
+                        return;
+                    }
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        if (methodsFromOtherActions.Contains(method) && !route.Methods.Contains(method))
+                            continue;
+
+                        if (!route.Methods.Contains(method))
+                            scope.FailWith($"Controller: '{controller}' Action: '{action.Name}' Route: '{route.Path}' does not contain HTTP method '{method}' but should");
+                    }
+                    else
+                    {
+                        if (route.Methods.Contains(method))
+                            scope.FailWith($"Controller: '{controller}' Action: '{action.Name}' Route: '{route.Path}' contains HTTP method '{method}' but shouldn't");
+                    }
+                }
+            }
         }
 
     }

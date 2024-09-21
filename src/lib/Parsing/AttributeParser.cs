@@ -1,7 +1,7 @@
 using dnlib.DotNet;
-using Makspll.ReflectionUtils.Routing;
+using Makspll.Pathfinder.Routing;
 
-namespace Makspll.ReflectionUtils.Parsing;
+namespace Makspll.Pathfinder.Parsing;
 
 public static class AttributeParser
 {

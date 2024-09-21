@@ -1,4 +1,4 @@
-namespace Makspll.ReflectionUtils.Routing;
+namespace Makspll.Pathfinder.Routing;
 
 /// <summary>
 ///  Represents the concept of a WEB controller in a .NET assembly

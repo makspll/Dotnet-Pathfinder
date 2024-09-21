@@ -32,16 +32,16 @@ namespace dotnet8
     [ApiController]
     public class AttributeControllerNoRoute
     {
-        [HttpGet("getWithHttpGetRoute")] // ApiController attributes must have a route on each method if there is no route on the class (runtime error)
-        [ExpectRoute("/getWithHttpGetRoute")]
+        [HttpGet("attributecontrollernoroute/getWithHttpGetRoute")] // ApiController attributes must have a route on each method if there is no route on the class (runtime error)
+        [ExpectRoute("/attributecontrollernoroute/getWithHttpGetRoute")]
         public Task<OkObjectResult> Get()
         {
             return Task.FromResult(new OkObjectResult("With APIController attribute GET"));
         }
 
 
-        [Route("getwithroute")]
-        [ExpectRoute("/getwithroute")]
+        [Route("attributecontrollernoroute/getwithroute")]
+        [ExpectRoute("/attributecontrollernoroute/getwithroute")]
         public Task<OkObjectResult> GetWithRoute()
         {
             return Task.FromResult(new OkObjectResult("With APIController attribute GET with route"));
@@ -76,8 +76,8 @@ namespace dotnet8
             return Task.FromResult(new OkObjectResult("With APIController attribute GET"));
         }
 
-        [Route("getwithroute")]
-        [ExpectRoute("/getwithroute")]
+        [Route("InheritingControllerNoRoute/getwithroute")]
+        [ExpectRoute("/InheritingControllerNoRoute/getwithroute")]
         public Task<OkObjectResult> GetWithRoute()
         {
             return Task.FromResult(new OkObjectResult("With APIController attribute GET with route"));
@@ -103,6 +103,16 @@ namespace dotnet8
 
     }
 
+    public abstract class CustomBase : Controller;
+
+    public class CustomBaseInheritingController : CustomBase
+    {
+
+        [HttpGet]
+        [Route("custombase/route")]
+        public Task Get() => Task.FromResult(new OkResult());
+    }
+
     public class InheritingController2NoRoute : Controller
     {
         [HttpGet]
@@ -112,8 +122,8 @@ namespace dotnet8
             return Task.FromResult(new OkObjectResult("With APIController attribute GET"));
         }
 
-        [Route("getwithroute")]
-        [ExpectRoute("/getwithroute")]
+        [Route("inheritingcontroller2noroute/getwithroute")]
+        [ExpectRoute("/inheritingcontroller2noroute/getwithroute")]
         public Task<OkObjectResult> GetWithRoute()
         {
             return Task.FromResult(new OkObjectResult("With APIController attribute GET with route"));
@@ -130,6 +140,43 @@ namespace dotnet8
             return Task.FromResult(new OkObjectResult("ActiveControllerWithNoMethodRoute"));
         }
     }
+
+    [ApiController]
+    [Route("controllerComplexHttpMethods")]
+    public class ControllerComplexHttpMethods
+    {
+        [HttpGet("get")]
+        [HttpPost("post")]
+        [HttpPut("put")]
+        [HttpDelete("delete")]
+        [HttpPatch("patch")]
+        [HttpOptions("options")]
+        [HttpHead("head")]
+        public Task MultipleHTTPMethodsWithRotues() => Task.FromResult(new OkResult());
+
+        [HttpGet("get2")]
+        [HttpPost]
+        [HttpPut("put2")]
+        [HttpDelete]
+        [HttpPatch("patch2")]
+        [HttpOptions("options2")]
+        [HttpHead]
+        public Task MultipleHTTPMethodsSomeWithRoutes() => Task.FromResult(new OkResult());
+
+        [Route("HttpMethodWithSameRouteAsAnotherButDifferentMethod")]
+        public Task HttpMethodWithSameRouteAsAnotherButNoMethod() => Task.FromResult(new OkResult());
+
+        [HttpGet("HttpMethodWithSameRouteAsAnotherButDifferentMethod")]
+        public Task HttpMethodWithSameRouteAsAnotherButGetMethod() => Task.FromResult(new OkResult());
+
+        [HttpPost("HttpMethodWithSameRouteAsAnotherButDifferentMethod")]
+        public Task HttpMethodWithSameRouteAsAnotherButPostMethod() => Task.FromResult(new OkResult());
+
+
+    }
+
+    [ApiController]
+    public class ControllerWithNoRoutes;
 
     [ApiController]
     [Route("api")]

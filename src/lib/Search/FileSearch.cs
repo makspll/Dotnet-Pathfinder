@@ -1,6 +1,6 @@
 using GlobExpressions;
 
-namespace Makspll.ReflectionUtils.Search;
+namespace Makspll.Pathfinder.Search;
 
 
 public static class FileSearch

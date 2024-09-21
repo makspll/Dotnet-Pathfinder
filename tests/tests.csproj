@@ -13,7 +13,7 @@
     <ProjectReference Include="../test_assemblies/TestUtils/TestUtils.csproj" />
     <PackageReference Include="dnlib" Version="4.4.0" /> 
     <PackageReference Include="FluentAssertions" Version="6.12.0" /> 
-    <ProjectReference Include="../src/ReflectionUtils.csproj" />
+    <ProjectReference Include="../src/lib/PathfinderLib.csproj" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.6.0" />
     <PackageReference Include="xunit" Version="2.4.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">

@@ -1,9 +1,9 @@
-namespace Makspll.ReflectionUtils.Serialization;
+namespace Makspll.Pathfinder.Serialization;
 
 using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Makspll.ReflectionUtils.Routing;
+using Makspll.Pathfinder.Routing;
 
 public class RoutingAttributeConverter : JsonConverter<RoutingAttribute>
 {
