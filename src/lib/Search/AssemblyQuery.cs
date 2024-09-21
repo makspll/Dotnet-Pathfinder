@@ -241,37 +241,37 @@ public class AssemblyQuery
     }
 
 
-    public IEnumerable<Controller> FindControllersWithConventionalRouting(IEnumerable<ConventionalRoute> conventionalRoutes)
-    {
-        // conventional routing exposes controllers either via:
-        // 1. a {controller} route parameter
-        // 2. a route template with a default pointing to the controller, i.e. 'api/myroute' with a default of 'TestController'
-        // we need to do 2 things, find all controllers through those avenues
-        // and then replace all parameter names with concrete values, if we're left with any parameters, we leave them in the route
-        foreach (var route in conventionalRoutes)
-        {
-            // var controllers = new List<Controller>();
-            // var 
-            // // first check if we have a {controller} part
-            // var controllerPart = route.Template.FirstOrDefault(x => x.PartName == "controller");
-            // if (controllerPart != null)
-            // {
+    // public IEnumerable<Controller> FindControllersWithConventionalRouting(IEnumerable<ConventionalRoute> conventionalRoutes)
+    // {
+    // conventional routing exposes controllers either via:
+    // 1. a {controller} route parameter
+    // 2. a route template with a default pointing to the controller, i.e. 'api/myroute' with a default of 'TestController'
+    // we need to do 2 things, find all controllers through those avenues
+    // and then replace all parameter names with concrete values, if we're left with any parameters, we leave them in the route
+    // foreach (var route in conventionalRoutes)
+    // {
+    // var controllers = new List<Controller>();
+    // var 
+    // // first check if we have a {controller} part
+    // var controllerPart = route.Template.FirstOrDefault(x => x.PartName == "controller");
+    // if (controllerPart != null)
+    // {
 
-            // }
-            // else
-            // {
-            //     // if we don't rely on the defaults for the route 
-            //     route.Defaults.TryGetValue("controller", out var controllerName);
+    // }
+    // else
+    // {
+    //     // if we don't rely on the defaults for the route 
+    //     route.Defaults.TryGetValue("controller", out var controllerName);
 
-            //     if (controllerName != null)
-            //     {
-            //         var controller = FindControllers(controllerName).FirstOrDefault();
-            //         if (controller != null)
-            //         {
-            //             controllers.Add(controller);
-            //         }
-            //     }
-            // }
-        }
-    }
+    //     if (controllerName != null)
+    //     {
+    //         var controller = FindControllers(controllerName).FirstOrDefault();
+    //         if (controller != null)
+    //         {
+    //             controllers.Add(controller);
+    //         }
+    //     }
+    // }
+    // }
+    // }
 }
