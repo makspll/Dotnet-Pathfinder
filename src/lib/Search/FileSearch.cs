@@ -45,4 +45,30 @@ public static class FileSearch
             }
         }
     }
+
+    /// <summary>
+    /// Finds the nearest file with the given name in the directory tree starting from the given directory.
+    /// </summary>
+    public static FileInfo? FindNearestFile(string filename, string searchRootDir, int limit = 20)
+    {
+        var searchRoot = new DirectoryInfo(searchRootDir);
+        if (!searchRoot.Exists || !searchRoot.Attributes.HasFlag(FileAttributes.Directory))
+        {
+            throw new DirectoryNotFoundException($"Directory not found: {searchRootDir}");
+        }
+
+        var currentDir = searchRoot;
+        while (currentDir != null && limit-- > 0)
+        {
+            var file = new FileInfo(Path.Combine(currentDir.FullName, filename));
+            if (file.Exists)
+            {
+                return file;
+            }
+
+            currentDir = currentDir.Parent;
+        }
+
+        return null;
+    }
 }

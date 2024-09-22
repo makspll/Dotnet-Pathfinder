@@ -1,13 +1,15 @@
 using Microsoft.AspNetCore.Routing;
-using Microsoft.AspNetCore.Mvc.Controllers;
 using System.Text.Json.Serialization;
 using System.Reflection;
+using Microsoft.AspNetCore.Mvc.Controllers;
+using Microsoft.AspNetCore.Mvc.ActionConstraints;
+
 
 namespace TestUtils;
 public record RouteInfo
 {
-    [JsonPropertyName("method")]
-    public string? Method { get; set; }
+    [JsonPropertyName("methods")]
+    public required IEnumerable<string> HttpMethods { get; set; }
     [JsonPropertyName("route")]
     public required string Route { get; set; }
     [JsonPropertyName("action")]
@@ -27,17 +29,11 @@ public record RouteInfo
 
 public static class PathsExporter
 {
-    public static List<RouteInfo> ListAllRoutes(IEnumerable<EndpointDataSource> _endpointSources)
+    public static List<RouteInfo> ListAllRoutes(IEnumerable<ControllerActionDescriptor> _endpointSources, bool includeConventional = true, bool includeAttributeRoutes = true)
     {
-        var endpoints = _endpointSources
-                   .SelectMany(es => es.Endpoints)
-                   .OfType<RouteEndpoint>();
-        var output = endpoints.Select(
-            e =>
+        var output = _endpointSources.Select(
+            controller =>
             {
-                var controller = e.Metadata
-                    .OfType<ControllerActionDescriptor>()
-                    .FirstOrDefault();
                 var action = controller != null
                     ? $"{controller.ControllerName}.{controller.ActionName}"
                     : null;
@@ -48,19 +44,31 @@ public static class PathsExporter
                 var expectRouteAttr = controller?.MethodInfo.GetCustomAttribute<ExpectRouteAttribute>();
                 var expectNoRouteAttr = controller?.MethodInfo.GetCustomAttribute<ExpectNoRouteAttribute>();
 
+                var route = controller?.AttributeRouteInfo?.Template;
+                string[] allHttpMethods = ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"];
+                var httpMethods = controller!.ActionConstraints?.OfType<HttpMethodActionConstraint>().SingleOrDefault()?.HttpMethods ?? allHttpMethods;
+
+                if (route == null && !includeConventional)
+                    return null;
+                if (route != null && !includeAttributeRoutes)
+                    return null;
+
+                if (route != null && !route.StartsWith('/'))
+                    route = "/" + route;
+
                 return new RouteInfo()
                 {
-                    Method = e.Metadata.OfType<HttpMethodMetadata>().FirstOrDefault()?.HttpMethods?[0],
-                    Route = $"/{e.RoutePattern.RawText!.TrimStart('/')}",
+                    HttpMethods = httpMethods,
+                    Route = route!,
                     Action = action,
                     ControllerMethod = controllerMethod,
                     ExpectedRoute = expectRouteAttr?.Path,
-                    ConventionalRoute = expectRouteAttr?.Conventional ?? controllerMethod == null,
+                    ConventionalRoute = false,
                     ExpectNoRoute = expectNoRouteAttr != null
                 };
             }
         );
 
-        return output.ToList();
+        return output.OfType<RouteInfo>().ToList();
     }
 }

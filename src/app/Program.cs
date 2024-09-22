@@ -28,7 +28,7 @@ var output = new List<Assembly>();
 foreach (var dll in dlls)
 {
     var query = new AssemblyQuery(dll);
-    var controllers = query.FindControllers();
+    var controllers = query.FindAllControllers().ToList();
 
     var assembly = new Assembly
     {
@@ -55,7 +55,8 @@ if (parsedArgs.OutputFormat == OutputFormat.Text)
             Console.WriteLine($"Controller: {controller.Name.Color(ConsoleColor.DarkGreen)}");
             foreach (var action in controller.Actions)
             {
-                Console.WriteLine($"  Action: {action.Name.Color(ConsoleColor.DarkGray)}");
+                var conventional = action.IsConventional ? "Conventional" : "Non-Conventional";
+                Console.WriteLine($"  Action: {action.Name.Color(ConsoleColor.DarkMagenta)} - {conventional.Color(ConsoleColor.DarkGray)}");
                 foreach (var route in action.Routes)
                 {
                     string methods;

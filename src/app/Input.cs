@@ -20,10 +20,6 @@ public record Args
 
     [Option('d', "directory", Default = ".", HelpText = "Root directory to search for DLLs", MetaValue = "<directory>")]
     public required string Directory { get; set; }
-
-    [Option('c', "config", Default = "routing-config.json", HelpText = "Config file containing all conventional routes and additional redirects. If not found will traverse directory tree to find matching file.", MetaValue = "<file>")]
-    public required string RoutingConfig { get; set; }
-
 }
 
 public static class InputParser

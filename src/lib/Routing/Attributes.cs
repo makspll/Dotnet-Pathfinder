@@ -33,6 +33,21 @@ public enum HTTPMethod
     OPTIONS,
 }
 
+public static class HTTPMethodExtensions
+{
+    public static HttpMethod ToHttpMethod(this HTTPMethod method)
+    {
+        return new HttpMethod(method.ToString());
+    }
+
+    public static string ToVerbString(this HTTPMethod method)
+    {
+        var stringVerb = method.ToString();
+        return stringVerb[0].ToString().ToUpper() + stringVerb[1..].ToLower();
+    }
+}
+
+
 /// Tagged union of attributes relating to routing
 public abstract class RoutingAttribute(string name)
 {
@@ -59,6 +74,15 @@ public abstract class RoutingAttribute(string name)
     /// </summary>
     public virtual HTTPMethod? HttpMethodOverride() => null;
 
+    /// <summary>
+    /// If the attribute defines an area for a controller, return it
+    /// </summary>
+    public virtual string? Area() => null;
+
+    /// <summary>
+    /// If the attribute overrides the action name, return it
+    /// </summary>
+    public virtual string? ActionName() => null;
 }
 
 public class ApiControllerAttribute : RoutingAttribute
@@ -86,4 +110,23 @@ public class HttpAttribute(HTTPMethod method, string? route) : RoutingAttribute(
     public override string? Route() => Path;
 
     public override HTTPMethod? HttpMethodOverride() => Method;
+}
+
+public class AreaAttribute(string area) : RoutingAttribute("Area")
+{
+    public string AreaValue { get; init; } = area;
+
+    public override string? Route() => null;
+
+    public override string? Area() => AreaValue;
+}
+
+
+public class ActionNameAttribute(string name) : RoutingAttribute("ActionName")
+{
+    public string ActionNameValue { get; init; } = name;
+
+    public override string? Route() => null;
+
+    public override string? ActionName() => ActionNameValue;
 }

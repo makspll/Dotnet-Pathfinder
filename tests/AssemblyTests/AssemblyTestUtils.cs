@@ -89,27 +89,6 @@ namespace AssemblyTests
             return dllPath;
         }
 
-
-        // public record RouteInfo
-        // {
-        //     [JsonPropertyName("method")]
-        //     public string? Method { get; set; }
-        //     [JsonPropertyName("routes")]
-        //     public required string Route { get; set; }
-        //     [JsonPropertyName("action")]
-        //     public string? Action { get; set; }
-        //     [JsonPropertyName("controllerMethod")]
-        //     public string? ControllerMethod { get; set; }
-
-        //     [JsonPropertyName("expectedRoutes")]
-        //     public string? ExpectedRoute { get; set; }
-
-        //     [JsonPropertyName("expectNoRoute")]
-        //     public bool ExpectNoRoute { get; set; }
-
-        //     [JsonPropertyName("conventionalRoute")]
-        //     public bool ConventionalRoute { get; set; }
-        // }
         public static T? WaitUntillEndpointAndCall<T>(string url)
         {
             var timeout = DateTime.Now.AddSeconds(15);
@@ -149,8 +128,9 @@ namespace AssemblyTests
             }
         }
 
-        public static Process RunAssembly(string dllPath, int port = 5000)
+        public static Process RunAssembly(string dllPath, int port = 5000, bool forwardOutput = false)
         {
+
             var process = new Process
             {
                 StartInfo = new ProcessStartInfo
@@ -166,10 +146,14 @@ namespace AssemblyTests
             process.Start();
 
             // Forward stdout and stderr continuously while waiting
-            process.OutputDataReceived += (sender, e) => Console.WriteLine(e.Data);
-            process.ErrorDataReceived += (sender, e) => Console.WriteLine(e.Data);
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
+            if (forwardOutput)
+            {
+                process.OutputDataReceived += (sender, e) => Console.WriteLine(e.Data);
+                process.ErrorDataReceived += (sender, e) => Console.WriteLine(e.Data);
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+            }
+
             return process;
         }
 
@@ -181,6 +165,20 @@ namespace AssemblyTests
             // shut down the process
             process.Kill();
             process.WaitForExit();
+        }
+
+        public static string InstantiateRoute(string expected, string expectedController, string expectedAction, string expectedArea)
+        {
+            if (expected.Contains('{') || expected.Contains('}'))
+            {
+                var parsed = ConventionalRoute.Parse(expected, null).Value;
+                var instantiated = parsed.InstantiateTemplateWith(expectedController, expectedAction, expectedArea, false);
+                return instantiated;
+            }
+            else
+            {
+                return expected;
+            }
         }
 
         public static void AssertControllerMatchedReflectionMetadata(TestUtils.RouteInfo? expected, Controller? received)
@@ -227,51 +225,27 @@ namespace AssemblyTests
                 var allRoutesString = string.Join(", ", receivedMethod.Routes.Select(r => r.Path));
                 scope.FailWith($"{received.Namespace}::{received.Name} - '[{allRoutesString}]' was expected to contain {expected!.Route}");
             }
-        }
-
-        public static void AssertActionAllowedMethods(string controller, Makspll.Pathfinder.Routing.Action action, string host, IEnumerable<HTTPMethod> methodsFromOtherActions)
-        {
-            // call action with all methods
-            var scope = AssertionScope.Current;
-
-            foreach (var route in action.Routes)
+            else
             {
-                foreach (var method in Enum.GetValues<HTTPMethod>())
+                // check http methods
+                var matchingAction = receivedMethod.Routes.First(r => r.Path == expected!.Route);
+
+                var expectedHttpMethods = expected!.HttpMethods;
+                var receivedHttpMethods = matchingAction.Methods.Select(m => m.ToVerbString().ToUpper()).ToList();
+
+                foreach (var method in Enum.GetNames<HTTPMethod>())
                 {
-                    var url = $"{host}{route.Path}";
-                    var client = new HttpClient();
-                    var message = new HttpRequestMessage
+                    if (expectedHttpMethods.Contains(method.ToUpper()) && !receivedHttpMethods.Contains(method.ToUpper()))
                     {
-                        Method = HttpMethod.Parse(method.ToString()),
-                        RequestUri = new Uri(url)
-                    };
-                    HttpResponseMessage response;
-                    try
-                    {
-                        response = client.Send(message);
+                        scope.FailWith($"{received.Namespace}::{received.Name} - {expected!.Route} was expected to support HTTP method: {method}, supported methods: {string.Join(", ", receivedHttpMethods)}");
                     }
-                    catch (Exception e)
+                    else if (!expectedHttpMethods.Contains(method.ToUpper()) && receivedHttpMethods.Contains(method.ToUpper()))
                     {
-                        scope.FailWith($"Controller: '{controller}' Action: '{action.Name}' Route: '{route.Path}' could not call endpoint due to failure: {e.Message}");
-                        return;
+                        scope.FailWith($"{received.Namespace}::{received.Name} - {expected!.Route} was not expected to support HTTP method: {method}, supported methods: {string.Join(", ", receivedHttpMethods)}");
                     }
 
-                    if (response.IsSuccessStatusCode)
-                    {
-                        if (methodsFromOtherActions.Contains(method) && !route.Methods.Contains(method))
-                            continue;
-
-                        if (!route.Methods.Contains(method))
-                            scope.FailWith($"Controller: '{controller}' Action: '{action.Name}' Route: '{route.Path}' does not contain HTTP method '{method}' but should");
-                    }
-                    else
-                    {
-                        if (route.Methods.Contains(method))
-                            scope.FailWith($"Controller: '{controller}' Action: '{action.Name}' Route: '{route.Path}' contains HTTP method '{method}' but shouldn't");
-                    }
                 }
             }
         }
-
     }
 }

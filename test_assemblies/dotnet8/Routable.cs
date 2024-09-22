@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Controllers;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Routing;
 using System.Linq;
 using System.Reflection;
@@ -69,7 +70,6 @@ namespace dotnet8
 
     public class InheritingControllerNoRoute : ControllerBase
     {
-        [HttpGet]
         [ExpectRoute("/program/{controller}/{action}", conventional: true)]
         public Task<OkObjectResult> Get()
         {
@@ -181,17 +181,25 @@ namespace dotnet8
     [ApiController]
     [Route("api")]
     public class ListAllRoutesController(
-        IEnumerable<EndpointDataSource> endpointSources
+        IActionDescriptorCollectionProvider actionDescriptorCollectionProvider
         ) : ControllerBase
     {
-        private readonly IEnumerable<EndpointDataSource> _endpointSources = endpointSources;
+        private readonly IActionDescriptorCollectionProvider actionDescriptorCollectionProvider = actionDescriptorCollectionProvider;
 
         [HttpGet]
-        [Route("allroutes")]
-        [ExpectRoute("/api/allroutes")]
-        public Task<OkObjectResult> ListAllRoutes()
+        [Route("attributeroutes")]
+        public Task<OkObjectResult> ListAttributeRoutes()
         {
-            return Task.FromResult(new OkObjectResult(PathsExporter.ListAllRoutes(_endpointSources)));
+            var actionDescriptors = actionDescriptorCollectionProvider.ActionDescriptors.Items.OfType<ControllerActionDescriptor>();
+            return Task.FromResult(new OkObjectResult(PathsExporter.ListAllRoutes(actionDescriptors, false)));
+        }
+
+        [HttpGet]
+        [Route("conventionalroutes")]
+        public Task<OkObjectResult> ListConventionalRoutes()
+        {
+            var actionDescriptors = actionDescriptorCollectionProvider.ActionDescriptors.Items.OfType<ControllerActionDescriptor>();
+            return Task.FromResult(new OkObjectResult(PathsExporter.ListAllRoutes(actionDescriptors, true, false)));
         }
     }
 }

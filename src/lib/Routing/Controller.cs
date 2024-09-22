@@ -23,7 +23,7 @@ public class Controller
     /// <summary>
     /// The actions that the controller is responsible for
     /// </summary>
-    public required IEnumerable<Action> Actions { get; init; }
+    public required List<Action> Actions { get; init; }
 
     /// <summary>
     /// Attributes marking up the controller

@@ -1,0 +1,7 @@
+{
+    "ConventionalRoutes": [
+        {
+            "Template": "program/{controller}/{action}"
+        }
+    ]
+}
