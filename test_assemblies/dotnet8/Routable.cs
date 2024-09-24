@@ -10,17 +10,16 @@ using TestUtils;
 namespace dotnet8
 {
     [ApiController]
+    [Route("attributecontrollerprefix2")]
     [Route("attributecontrollerprefix")]
     public class AttributeController
     {
 
-        [ExpectRoute("/attributecontrollerprefix")]
         public Task Get() => Task.FromResult(new OkResult());
 
 
         [HttpGet]
         [Route("getwithroute")]
-        [ExpectRoute("/attributecontrollerprefix/getwithroute")]
         public Task GetWithRoute() => Task.FromResult(new OkResult());
 
         [HttpGet]
@@ -34,7 +33,6 @@ namespace dotnet8
     public class AttributeControllerNoRoute
     {
         [HttpGet("attributecontrollernoroute/getWithHttpGetRoute")] // ApiController attributes must have a route on each method if there is no route on the class (runtime error)
-        [ExpectRoute("/attributecontrollernoroute/getWithHttpGetRoute")]
         public Task<OkObjectResult> Get()
         {
             return Task.FromResult(new OkObjectResult("With APIController attribute GET"));
@@ -42,7 +40,6 @@ namespace dotnet8
 
 
         [Route("attributecontrollernoroute/getwithroute")]
-        [ExpectRoute("/attributecontrollernoroute/getwithroute")]
         public Task<OkObjectResult> GetWithRoute()
         {
             return Task.FromResult(new OkObjectResult("With APIController attribute GET with route"));
@@ -50,17 +47,16 @@ namespace dotnet8
     }
 
     [Route("inheritingcontrollerprefix")]
+    [Route("inheritingcontrollerprefix2")]
     public class InheritingController : ControllerBase
     {
         [HttpGet]
-        [ExpectRoute("/inheritingcontrollerprefix")]
         public Task<OkObjectResult> Get()
         {
             return Task.FromResult(new OkObjectResult("With APIController attribute GET"));
         }
 
         [Route("getwithroute")]
-        [ExpectRoute("/inheritingcontrollerprefix/getwithroute")]
         public Task<OkObjectResult> GetWithRoute()
         {
             return Task.FromResult(new OkObjectResult("With APIController attribute GET with route"));
@@ -70,14 +66,12 @@ namespace dotnet8
 
     public class InheritingControllerNoRoute : ControllerBase
     {
-        [ExpectRoute("/program/{controller}/{action}", conventional: true)]
         public Task<OkObjectResult> Get()
         {
             return Task.FromResult(new OkObjectResult("With APIController attribute GET"));
         }
 
         [Route("InheritingControllerNoRoute/getwithroute")]
-        [ExpectRoute("/InheritingControllerNoRoute/getwithroute")]
         public Task<OkObjectResult> GetWithRoute()
         {
             return Task.FromResult(new OkObjectResult("With APIController attribute GET with route"));
@@ -85,17 +79,16 @@ namespace dotnet8
     }
 
     [Route("inheritingcontroller2prefix")]
+    [Route("inheritingcontroller2prefix2")]
     public class InheritingController2 : Controller
     {
         [HttpGet]
-        [ExpectRoute("/inheritingcontroller2prefix")]
         public Task<OkObjectResult> Get()
         {
             return Task.FromResult(new OkObjectResult("With APIController attribute GET"));
         }
 
         [Route("getwithroute")]
-        [ExpectRoute("/inheritingcontroller2prefix/getwithroute")]
         public Task<OkObjectResult> GetWithRoute()
         {
             return Task.FromResult(new OkObjectResult("With APIController attribute GET with route"));
@@ -116,14 +109,12 @@ namespace dotnet8
     public class InheritingController2NoRoute : Controller
     {
         [HttpGet]
-        [ExpectRoute("/program/{controller}/{action}", conventional: true)]
         public Task<OkObjectResult> Get()
         {
             return Task.FromResult(new OkObjectResult("With APIController attribute GET"));
         }
 
         [Route("inheritingcontroller2noroute/getwithroute")]
-        [ExpectRoute("/inheritingcontroller2noroute/getwithroute")]
         public Task<OkObjectResult> GetWithRoute()
         {
             return Task.FromResult(new OkObjectResult("With APIController attribute GET with route"));
@@ -132,9 +123,9 @@ namespace dotnet8
 
     [ApiController]
     [Route("activeController")]
+    [Route("activeController2")]
     public class ActiveControllerWithNoMethodRoute
     {
-        [ExpectRoute("/activeController")]
         public Task<OkObjectResult> HelloWorld()
         {
             return Task.FromResult(new OkObjectResult("ActiveControllerWithNoMethodRoute"));
@@ -143,6 +134,7 @@ namespace dotnet8
 
     [ApiController]
     [Route("controllerComplexHttpMethods")]
+    [Route("controllerComplexHttpMethods2")]
     public class ControllerComplexHttpMethods
     {
         [HttpGet("get")]
@@ -171,9 +163,17 @@ namespace dotnet8
 
         [HttpPost("HttpMethodWithSameRouteAsAnotherButDifferentMethod")]
         public Task HttpMethodWithSameRouteAsAnotherButPostMethod() => Task.FromResult(new OkResult());
-
-
     }
+
+    public class DefaultConventionalController : Controller
+    {
+        [HttpGet]
+        public Task<OkObjectResult> DefaultAction() => Task.FromResult(new OkObjectResult("DefaultConventionalController"));
+
+        [HttpGet]
+        public Task<OkObjectResult> NonDefaultAction() => Task.FromResult(new OkObjectResult("NonDefaultAction"));
+    }
+
 
     [ApiController]
     public class ControllerWithNoRoutes;
@@ -181,17 +181,18 @@ namespace dotnet8
     [ApiController]
     [Route("api")]
     public class ListAllRoutesController(
-        IActionDescriptorCollectionProvider actionDescriptorCollectionProvider
+        IActionDescriptorCollectionProvider actionDescriptorCollectionProvider,
+        IEnumerable<EndpointDataSource> routeCollection
         ) : ControllerBase
     {
         private readonly IActionDescriptorCollectionProvider actionDescriptorCollectionProvider = actionDescriptorCollectionProvider;
-
+        private readonly IEnumerable<EndpointDataSource> routeCollection = routeCollection;
         [HttpGet]
         [Route("attributeroutes")]
         public Task<OkObjectResult> ListAttributeRoutes()
         {
             var actionDescriptors = actionDescriptorCollectionProvider.ActionDescriptors.Items.OfType<ControllerActionDescriptor>();
-            return Task.FromResult(new OkObjectResult(PathsExporter.ListAllRoutes(actionDescriptors, false)));
+            return Task.FromResult(new OkObjectResult(PathsExporter.ListAllRoutes(actionDescriptors, routeCollection, false)));
         }
 
         [HttpGet]
@@ -199,7 +200,7 @@ namespace dotnet8
         public Task<OkObjectResult> ListConventionalRoutes()
         {
             var actionDescriptors = actionDescriptorCollectionProvider.ActionDescriptors.Items.OfType<ControllerActionDescriptor>();
-            return Task.FromResult(new OkObjectResult(PathsExporter.ListAllRoutes(actionDescriptors, true, false)));
+            return Task.FromResult(new OkObjectResult(PathsExporter.ListAllRoutes(actionDescriptors, routeCollection, true, false)));
         }
     }
 }

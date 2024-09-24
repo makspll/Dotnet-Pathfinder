@@ -177,18 +177,21 @@ namespace AssemblyTests
             }
             else
             {
-                return expected;
+                return "/" + expected;
             }
         }
 
-        public static void AssertControllerMatchedReflectionMetadata(TestUtils.RouteInfo? expected, Controller? received)
+        /// <summary>
+        /// Assert that the received controller matches the expected route, for an attribute based route (non-conventional)
+        /// </summary>
+        public static void AssertControllerMatchedAttributeRoute(TestUtils.RouteInfo? expected, Controller? received)
         {
             var scope = AssertionScope.Current;
             if (expected == null && received != null)
             {
-                if (received.Actions.Any())
+                if (received.Actions.Any() && !received.Actions.All(x => x.IsConventional))
                 {
-                    scope.FailWith($"Controller {received.Name} is not expected to contain any routes");
+                    scope.FailWith($"Controller {received.ClassName} is not expected to contain any non conventional actions");
                     return;
                 }
                 else
@@ -197,7 +200,7 @@ namespace AssemblyTests
                 }
             }
 
-            var controller = expected?.ControllerMethod?.Split(":")[0] ?? expected?.Action;
+            var controller = $"{expected?.ControllerNamespace}::{expected?.ControllerClassName}";
 
             if (expected != null && received == null)
             {
@@ -211,24 +214,30 @@ namespace AssemblyTests
             }
 
             // find the method that matches the expected route
-            var receivedMethod = received!.Actions.FirstOrDefault(m => m.Name == expected!.ControllerMethod?.Split(":")[1]);
+            var receivedMethod = received!.Actions.FirstOrDefault(m => m.MethodName == expected!.ActionMethodName);
 
             if (receivedMethod == null)
             {
-                scope.FailWith($"{received.Namespace}::{received.Name} - {expected!.ControllerMethod} route not retrieved");
+                scope.FailWith($"{received.Namespace}::{received.ClassName} - {expected!.ActionMethodName} route not retrieved");
+                return;
+            }
+
+            if (receivedMethod.IsConventional)
+            {
+                scope.FailWith($"{received.Namespace}::{received.ClassName} - {expected!.ActionMethodName} route is conventional");
                 return;
             }
 
             // the route should match one of the expected routes
-            if (!receivedMethod.Routes.Any(r => r.Path == expected!.Route))
+            if (!receivedMethod.Routes.Any(r => r.Path == expected!.Routes.First()))
             {
                 var allRoutesString = string.Join(", ", receivedMethod.Routes.Select(r => r.Path));
-                scope.FailWith($"{received.Namespace}::{received.Name} - '[{allRoutesString}]' was expected to contain {expected!.Route}");
+                scope.FailWith($"{received.Namespace}::{received.ClassName} - '[{allRoutesString}]' was expected to contain {expected!.Routes.First()}");
             }
             else
             {
                 // check http methods
-                var matchingAction = receivedMethod.Routes.First(r => r.Path == expected!.Route);
+                var matchingAction = receivedMethod.Routes.First(r => r.Path == expected!.Routes.First());
 
                 var expectedHttpMethods = expected!.HttpMethods;
                 var receivedHttpMethods = matchingAction.Methods.Select(m => m.ToVerbString().ToUpper()).ToList();
@@ -237,11 +246,11 @@ namespace AssemblyTests
                 {
                     if (expectedHttpMethods.Contains(method.ToUpper()) && !receivedHttpMethods.Contains(method.ToUpper()))
                     {
-                        scope.FailWith($"{received.Namespace}::{received.Name} - {expected!.Route} was expected to support HTTP method: {method}, supported methods: {string.Join(", ", receivedHttpMethods)}");
+                        scope.FailWith($"{received.Namespace}::{received.ClassName} - {expected!.Routes.First()} was expected to support HTTP method: {method}, supported methods: {string.Join(", ", receivedHttpMethods)}");
                     }
                     else if (!expectedHttpMethods.Contains(method.ToUpper()) && receivedHttpMethods.Contains(method.ToUpper()))
                     {
-                        scope.FailWith($"{received.Namespace}::{received.Name} - {expected!.Route} was not expected to support HTTP method: {method}, supported methods: {string.Join(", ", receivedHttpMethods)}");
+                        scope.FailWith($"{received.Namespace}::{received.ClassName} - {expected!.Routes.First()} was not expected to support HTTP method: {method}, supported methods: {string.Join(", ", receivedHttpMethods)}");
                     }
 
                 }

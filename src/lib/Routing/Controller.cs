@@ -6,9 +6,14 @@ namespace Makspll.Pathfinder.Routing;
 public class Controller
 {
     /// <summary>
-    /// The name of the controller
+    /// The name of the controller. This is the name of the class without the "Controller" suffix if one exists
     /// </summary>
-    public required string Name { get; init; }
+    public required string ControllerName { get; init; }
+
+    /// <summary>
+    /// The class name of the controller
+    /// </summary>
+    public required string ClassName { get; init; }
 
     /// <summary>
     /// The namespace the controller lives in
@@ -29,4 +34,14 @@ public class Controller
     /// Attributes marking up the controller
     /// </summary>
     public required IEnumerable<RoutingAttribute> Attributes { get; init; }
+
+    public static string ParseControllerName(string className)
+    {
+        if (className.EndsWith("Controller"))
+        {
+            return className[..^"Controller".Length];
+        }
+        return className;
+    }
 }
+

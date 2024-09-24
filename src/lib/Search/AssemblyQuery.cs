@@ -1,4 +1,5 @@
 using System.Text.Json;
+using ANSIConsole;
 using dnlib.DotNet;
 using Makspll.Pathfinder.Parsing;
 using Makspll.Pathfinder.Routing;
@@ -6,24 +7,27 @@ using Makspll.Pathfinder.RoutingConfig;
 
 namespace Makspll.Pathfinder.Search;
 
+public enum QueryFeature
+{
+    AutomaticActionDiscoveryWhenNoParameterOrDefault
+}
+
 public class AssemblyQuery(ModuleDefMD module, IEnumerable<ConventionalRoute>? config = null)
 {
     readonly ModuleDefMD LoadedModule = module;
     readonly IEnumerable<ConventionalRoute>? config = config;
 
-    public AssemblyQuery(string dll) : this(ModuleDefMD.Load(dll, ModuleDef.CreateModuleContext()), FindAndParseNearestConfig(dll)) { }
+    IEnumerable<QueryFeature> SearchFeatures = [];
 
-    /// <summary>
-    /// Finds and parses the nearest pathfinder.json file in the directory tree starting from the given directory. Returns null if no file is found.
-    /// </summary>
-    public static IEnumerable<ConventionalRoute>? FindAndParseNearestConfig(string dll)
+    public AssemblyQuery(string dll, IEnumerable<ConventionalRoute>? routes = null) : this(ModuleDefMD.Load(dll, ModuleDef.CreateModuleContext()), routes ?? FindAndParseNearestConfig(dll)) { }
+
+
+    public static IEnumerable<ConventionalRoute>? ParseConfig(FileInfo configFile)
     {
-        var dllDirectory = Path.GetDirectoryName(dll);
-        var configPath = FileSearch.FindNearestFile("pathfinder.json", dllDirectory ?? dll);
-        if (configPath == null)
+        if (!configFile.Exists)
             return null;
 
-        var config = JsonSerializer.Deserialize<PathfinderConfig>(File.ReadAllText(configPath.FullName));
+        var config = JsonSerializer.Deserialize<PathfinderConfig>(File.ReadAllText(configFile.FullName));
 
         if (config == null)
             return null;
@@ -40,6 +44,19 @@ public class AssemblyQuery(ModuleDefMD module, IEnumerable<ConventionalRoute>? c
         }
 
         return results.Select(x => x.Value);
+    }
+
+    /// <summary>
+    /// Finds and parses the nearest pathfinder.json file in the directory tree starting from the given directory. Returns null if no file is found.
+    /// </summary>
+    public static IEnumerable<ConventionalRoute>? FindAndParseNearestConfig(string dll)
+    {
+        var dllDirectory = Path.GetDirectoryName(dll);
+        var configPath = FileSearch.FindNearestFile("pathfinder.json", dllDirectory ?? dll);
+        if (configPath == null)
+            return null;
+
+        return ParseConfig(configPath);
     }
 
     static string JoinRoutes(string? prefix, string? suffix)
@@ -177,74 +194,81 @@ public class AssemblyQuery(ModuleDefMD module, IEnumerable<ConventionalRoute>? c
         return null;
     }
 
-    static List<Routing.Action> FindConventionalActions(ConventionalRoute route, TypeDef controllerType, IEnumerable<MethodDef> methods)
+    List<Routing.Action> FindConventionalActions(ConventionalRoute route, TypeDef controllerType, IEnumerable<MethodDef> methods)
     {
         // calculating a conventional routes is simple, we fill in the values of the route template if we match, leave the rest as parameters 
         // https://learn.microsoft.com/en-us/aspnet/web-api/overview/web-api-routing-and-actions/routing-and-action-selection
 
         var controller = route.Controller;
+        var controllerDefault = controller?.DefaultValue ?? route.Defaults?.GetValueOrDefault("controller") ?? null;
+        var controllerName = Controller.ParseControllerName(controllerType.Name);
+
         var action = route.Action;
+        var actionDefault = action?.DefaultValue ?? route.Defaults?.GetValueOrDefault("action");
+
         var area = route.Area;
+        var areaDefault = area?.DefaultValue ?? route.Defaults?.GetValueOrDefault("area");
 
         var controllerRoutingAttrs = controllerType.CustomAttributes.Select(AttributeParser.ParseAttribute).OfType<RoutingAttribute>().ToList();
 
         var areaAttribute = controllerRoutingAttrs.Select(x => x.Area()).OfType<string>().FirstOrDefault();
-        var areaName = areaAttribute ?? area?.DefaultValue ?? "";
+        var areaName = areaAttribute ?? area?.DefaultValue ?? null; // TODO; areas
         var finalActions = new List<Routing.Action>();
-        // ignore defaults we handle those somewhere else
-        // actions can also override their name via the ActionName attribute, as well as exclude themselves from routing by using the NonAction attribute
-        if (controller != null && action != null)
-        {
-            foreach (var method in EnumerateMethodsWhichCouldBeActions(methods))
-            {
-                var actionNameOverride = method.CustomAttributes.Select(AttributeParser.ParseAttribute).OfType<RoutingAttribute>().Select(x => x.ActionName()).OfType<string>().FirstOrDefault();
 
-                string finalRoute = route.InstantiateTemplateWith(controllerType.Name, actionNameOverride ?? method.Name, areaName);
-                var routingAttrs = method.CustomAttributes.Select(AttributeParser.ParseAttribute).OfType<RoutingAttribute>().ToList();
-                finalActions.Add(new Routing.Action
-                {
-                    Name = method.Name,
-                    Routes =
-                    [
-                        new() {
-                            Path = finalRoute,
-                            Methods = AllowedMethods(routingAttrs, null)
-                        }
-                    ],
-                    IsConventional = true,
-                    Attributes = routingAttrs
-                });
+        var routedController = controller == null ? controllerDefault : controllerName;
+        if (routedController != controllerName)
+        {
+            return finalActions;
+        }
+
+        foreach (var method in EnumerateMethodsWhichCouldBeActions(methods))
+        {
+            var actionNameOverride = method.CustomAttributes.Select(AttributeParser.ParseAttribute).OfType<RoutingAttribute>().Select(x => x.ActionName()).OfType<string>().FirstOrDefault();
+            var actionName = actionNameOverride ?? method.Name;
+            string instantiatedRoute = route.InstantiateTemplateWith(controllerName, actionName, areaName);
+
+            var routedAction = action == null ? actionDefault : actionName;
+            var routedArea = area == null ? areaDefault : areaName;
+
+            if (routedAction != actionName || routedArea != areaName)
+            {
+                continue;
             }
 
-            // the methods 
-        }
-        else if (controller != null)
-        {
-            // if we only have a controller, we use HTTP verbs to identify the action
-            // for example a GET request to /api/test would be routed to any action/method whose name is prefixed with the 'Get' value in its name
-            // if we don't find a matching verb we default to POST 
-            foreach (var method in EnumerateMethodsWhichCouldBeActions(methods))
+            var routingAttrs = method.CustomAttributes.Select(AttributeParser.ParseAttribute).OfType<RoutingAttribute>().ToList();
+            List<HTTPMethod> allowedMethods;
+            if (routedController != null && routedAction == null && SearchFeatures.Contains(QueryFeature.AutomaticActionDiscoveryWhenNoParameterOrDefault))
             {
-                var actionNameOverride = method.CustomAttributes.Select(AttributeParser.ParseAttribute).OfType<RoutingAttribute>().Select(x => x.ActionName()).OfType<string>().FirstOrDefault();
-                var allowedMethod = ActionNameToVerb(actionNameOverride ?? method.Name) ?? HTTPMethod.POST;
-
-                string finalRoute = route.InstantiateTemplateWith(controllerType.Name, actionNameOverride ?? method.Name, areaName);
-
-                finalActions.Add(new Routing.Action
-                {
-                    Name = method.Name,
-                    Routes =
-                    [
-                        new() {
-                            Path = finalRoute,
-                            Methods = [allowedMethod]
-                        }
-                    ],
-                    IsConventional = true,
-                    Attributes = method.CustomAttributes.Select(AttributeParser.ParseAttribute).OfType<RoutingAttribute>().ToList()
-                });
+                // old school ASP.NET framework MVC style routing
+                allowedMethods = [ActionNameToVerb(actionName) ?? HTTPMethod.POST];
             }
+            else if (routedController != null && routedAction != null)
+            {
+                // normal routing with either fully specified {controller} and {action} parameters or defaults if these are missing
+                allowedMethods = AllowedMethods(routingAttrs, null);
+            }
+            else
+            {
+                // we can't match up the route to the controller/action
+                continue;
+            }
+
+            finalActions.Add(new Routing.Action
+            {
+                MethodName = method.Name,
+                Routes =
+                [
+                    new() {
+                            Path = instantiatedRoute,
+                            Methods = [.. allowedMethods],
+                        }
+                ],
+                IsConventional = true,
+                Attributes = routingAttrs
+            });
+
         }
+
 
         return finalActions;
     }
@@ -264,7 +288,7 @@ public class AssemblyQuery(ModuleDefMD module, IEnumerable<ConventionalRoute>? c
 
             var action = new Routing.Action
             {
-                Name = method.Name,
+                MethodName = method.Name,
                 Routes = routes,
                 Attributes = routingAttrs,
                 IsConventional = false
@@ -343,26 +367,35 @@ public class AssemblyQuery(ModuleDefMD module, IEnumerable<ConventionalRoute>? c
             // figure out if the controller has a route it propagates to its actions
             var attributes = type.CustomAttributes.Select(AttributeParser.ParseAttribute).OfType<RoutingAttribute>().ToList();
             var routePrefixes = attributes.Where(x => x.Propagation() == RoutePropagation.Propagate && x.Route() != null).Select(x => x.Route());
+            if (!routePrefixes.Any())
+                routePrefixes = [null];
 
-            if (routePrefixes.Count() > 1)
-            {
-                throw new Exception($"Multiple route prefixes found on controller: {type.Name}. Prefixes: {string.Join(", ", routePrefixes)}");
-            }
-
-            List<Routing.Action> actions;
+            List<Routing.Action> actions = [];
 
             if (conventionalRoute != null)
             {
-                actions = FindConventionalActions(conventionalRoute, type, type.Methods);
+                actions.AddRange(FindConventionalActions(conventionalRoute, type, type.Methods));
             }
             else
             {
-                actions = FindActions(type.Methods, routePrefixes.FirstOrDefault());
+
+                foreach (var routePrefix in routePrefixes)
+                {
+                    foreach (var newAction in FindActions(type.Methods, routePrefix))
+                    {
+                        var existing = actions.FirstOrDefault(x => x.MethodName == newAction.MethodName);
+                        if (existing == null)
+                            actions.Add(newAction);
+                        else
+                            existing.Routes.AddRange(newAction.Routes);
+                    }
+                }
             }
 
             var controller = new Controller
             {
-                Name = type.Name,
+                ControllerName = Controller.ParseControllerName(type.Name),
+                ClassName = type.Name,
                 Namespace = type.Namespace,
                 Prefix = routePrefixes.FirstOrDefault(),
                 Actions = actions,
@@ -374,7 +407,7 @@ public class AssemblyQuery(ModuleDefMD module, IEnumerable<ConventionalRoute>? c
     }
 
 
-    IEnumerable<Controller> FindConventionalControllers()
+    List<Controller> FindConventionalControllers()
     {
         // conventional routing exposes controllers either via:
         // 1. a {controller} route parameter
@@ -388,7 +421,7 @@ public class AssemblyQuery(ModuleDefMD module, IEnumerable<ConventionalRoute>? c
 
         foreach (var route in config)
         {
-            controllers.AddRange(FindControllers(route).ToList());
+            controllers.AddRange([.. FindControllers(route)]);
         }
 
         return controllers;
@@ -403,7 +436,7 @@ public class AssemblyQuery(ModuleDefMD module, IEnumerable<ConventionalRoute>? c
 
         foreach (var controller in conventionalControllers)
         {
-            var existingController = attributeControllers.FirstOrDefault(x => x.Name == controller.Name && x.Namespace == controller.Namespace);
+            var existingController = attributeControllers.FirstOrDefault(x => x.ClassName == controller.ClassName && x.Namespace == controller.Namespace);
             if (existingController == null)
             {
                 attributeControllers.Add(controller);
@@ -413,15 +446,15 @@ public class AssemblyQuery(ModuleDefMD module, IEnumerable<ConventionalRoute>? c
                 // don't add conventional routes for actions routed via attribute routing
                 foreach (var action in controller.Actions)
                 {
-                    var existingAction = existingController.Actions.FirstOrDefault(x => x.Name == action.Name);
+                    var existingAction = existingController.Actions.FirstOrDefault(x => x.MethodName == action.MethodName);
                     if (existingAction == null)
                     {
                         existingController.Actions.Add(action);
                     }
                     else
                     {
-                        // merge the routes if none exist yet
-                        if (existingAction.Routes.Count == 0)
+                        // merge the routes if none attribute routes are present
+                        if (existingAction.Routes.Count == 0 || existingAction.IsConventional)
                         {
                             existingAction.IsConventional = true;
                             existingAction.Routes.AddRange(action.Routes);

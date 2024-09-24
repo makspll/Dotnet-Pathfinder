@@ -45,7 +45,8 @@ namespace AssemblyTests
         {
             ExpectPortFree(5000);
             var dllPath = BuildTestAssembly(testAssemblyDir);
-            var query = new AssemblyQuery(dllPath);
+            var configFile = Path.Combine(testAssemblyDir, "pathfinder.json");
+            var query = new AssemblyQuery(dllPath, AssemblyQuery.ParseConfig(new FileInfo(configFile)) ?? []);
             process = RunAssembly(dllPath);
             var _ = WaitUntillEndpointAndCall<RouteInfo[]>("http://localhost:5000/api/attributeroutes") ?? throw new Exception("Failed to get route info");
             return query;
@@ -71,31 +72,28 @@ namespace AssemblyTests
             // what should be there
             foreach (var route in attributeRoutes)
             {
-                // ignore conventional routes for now
-                if (route.ControllerMethod == null || route.ConventionalRoute)
-                    continue;
 
                 var matchingController = controllersMeta.FirstOrDefault(c =>
-                    c.Name == route.ControllerMethod?.Split(":")[0].Split(".").Last()
+                    c.ClassName == route.ControllerClassName
                 );
 
-                route.ExpectNoRoute.Should().Be(false, $"{route.Route} was marked with `ExpectNoRoute`");
+                route.ExpectNoRoute.Should().Be(false, $"{route.Routes.First()} was marked with `ExpectNoRoute`");
 
                 if (route.ExpectedRoute != null)
                 {
-                    route.Route.Should().Be(route.ExpectedRoute, $"Controller action {route.ControllerMethod} was marked with `ExpectRoute` attribute");
+                    route.Routes.First().Should().Be(route.ExpectedRoute, $"Controller action {route.Action} was marked with `ExpectRoute` attribute");
                 }
 
-                AssertControllerMatchedReflectionMetadata(route, matchingController);
+                AssertControllerMatchedAttributeRoute(route, matchingController);
             }
 
             // what should not be there
             foreach (var controller in controllersMeta)
             {
-                var matchingRoute = attributeRoutes.FirstOrDefault(r => r.ControllerMethod?.Split(":")[0].Split(".").Last() == controller.Name);
+                var matchingRoute = attributeRoutes.FirstOrDefault(r => r.ControllerClassName == controller.ClassName);
                 if (matchingRoute == null)
                 {
-                    AssertControllerMatchedReflectionMetadata(null, controller);
+                    AssertControllerMatchedAttributeRoute(null, controller);
                 }
                 else
                 {
@@ -108,10 +106,10 @@ namespace AssemblyTests
 
                         foreach (var route in action.Routes)
                         {
-                            var matchingRouteActions = attributeRoutes.Where(r => r.Route == route.Path);
+                            var matchingRouteActions = attributeRoutes.Where(r => r.Routes.First() == route.Path);
                             if (!matchingRouteActions.Any())
                             {
-                                AssertionScope.Current.FailWith($"{controller.Namespace}::{controller.Name} - {route.Path} was not expected to be routable");
+                                AssertionScope.Current.FailWith($"{controller.Namespace}::{controller.ClassName} - {route.Path} was not expected to be routable");
                             }
                         }
 
@@ -120,7 +118,7 @@ namespace AssemblyTests
             }
 
             // count for good measure
-            var expectedNonConventionalRoutes = attributeRoutes!.Count(r => !r.ConventionalRoute);
+            var expectedNonConventionalRoutes = attributeRoutes!.Length;
             var actualNonConventionalRoutes = controllersMeta.Sum(c => c.Actions.Where(x => !x.IsConventional).Sum(a => a.Routes.Count()));
             actualNonConventionalRoutes.Should().Be(expectedNonConventionalRoutes, "All non-conventional routes should be in the metadata");
 
@@ -152,17 +150,90 @@ namespace AssemblyTests
                                 var expectSuccess = route.Methods.Contains(method);
                                 if (!response.IsSuccessStatusCode && expectSuccess)
                                 {
-                                    AssertionScope.Current.FailWith($"Failed to access {controller.Namespace}::{controller.Name} - {route.Path} with {method}");
+                                    AssertionScope.Current.FailWith($"Failed to access {controller.Namespace}::{controller.ClassName} - {route.Path} with {method}");
                                 }
                             }
                             catch (Exception e)
                             {
-                                AssertionScope.Current.FailWith($"Failed to access {controller.Namespace}::{controller.Name} - {route.Path} with {method} - {e.Message}");
+                                AssertionScope.Current.FailWith($"Failed to access {controller.Namespace}::{controller.ClassName} - {route.Path} with {method} - {e.Message}");
                             }
                         }
                     }
                 }
             }
+        }
+
+        [Theory]
+        [MemberData(nameof(AllTestAssemblyDirs))]
+        public void TestConventionalRouting(string testAssemblyDir)
+        {
+            var query = PrepareAssembly(testAssemblyDir);
+            var controllersMeta = query.FindAllControllers();
+            using var scope = new AssertionScope();
+
+            var conventionalRoutes = WaitUntillEndpointAndCall<RouteInfo[]>("http://localhost:5000/api/conventionalroutes") ?? throw new Exception("Failed to get route info");
+
+            // for conventional routes we check that the actions are marked as conventional
+            // all routes when instantiate must match the returned routes
+
+            foreach (var route in conventionalRoutes)
+            {
+                var matchingController = controllersMeta.FirstOrDefault(c =>
+                    c.ClassName == route.ControllerClassName
+                );
+
+                if (matchingController == null)
+                {
+                    AssertionScope.Current.FailWith($"Controller {route.ControllerClassName} was not found in the metadata");
+                    continue;
+                }
+
+                var matchingAction = matchingController.Actions.FirstOrDefault(a => a.MethodName == route.ActionMethodName);
+
+                if (matchingAction == null)
+                {
+                    AssertionScope.Current.FailWith($"Action {route.ActionMethodName} was not found in the metadata for {route.ControllerClassName}");
+                    continue;
+                }
+
+                if (!matchingAction.IsConventional)
+                {
+                    AssertionScope.Current.FailWith($"Action {route.ActionMethodName} for {route.ControllerClassName} was not marked as conventional");
+                }
+                // TODO: area
+                foreach (var conventionalRoute in route.Routes)
+                {
+                    var instantiatedRoute = InstantiateRoute(conventionalRoute, route.ControllerName!, route.Action!, "{area}");
+                    if (!matchingAction.Routes.Any(r => r.Path == instantiatedRoute))
+                    {
+                        AssertionScope.Current.FailWith($"Route {instantiatedRoute} was not found in the metadata for {route.ControllerClassName}::{route.ActionMethodName}. Found routes: {string.Join(", ", matchingAction.Routes.Select(r => r.Path))}");
+                    }
+                }
+
+            }
+        }
+
+        [Theory]
+        [MemberData(nameof(AllTestAssemblyDirs))]
+        public void TestNoDuplicates(string testAssembly)
+        {
+            var query = PrepareAssembly(testAssembly);
+            var controllersMeta = query.FindAllControllers();
+            using var scope = new AssertionScope();
+
+            var allControllers = controllersMeta.Select(c => $"{c.Namespace}{c.ClassName}").ToList();
+            var duplicateControllers = allControllers.GroupBy(c => c).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
+
+            duplicateControllers.Should().BeEmpty("No duplicate controllers should be present");
+
+            foreach (var controller in controllersMeta)
+            {
+                var allActions = controller.Actions.Select(a => a.MethodName).ToList();
+                var duplicateActions = allActions.GroupBy(a => a).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
+
+                duplicateActions.Should().BeEmpty($"No duplicate actions should be present in {controller.Namespace}::{controller.ClassName}");
+            }
+
         }
     }
 }

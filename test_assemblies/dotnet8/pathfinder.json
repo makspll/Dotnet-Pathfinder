@@ -1,7 +1,20 @@
 {
     "ConventionalRoutes": [
         {
-            "Template": "program/{controller}/{action}"
+            "Template": "conventionalprefix/{controller}/{action}"
+        },
+        {
+            "Template": "conventionalprefix2/{controller}",
+            "Defaults": {
+                "action": "DefaultAction"
+            }
+        },
+        {
+            "Template": "conventionalwithnoactionspecs",
+            "Defaults": {
+                "controller": "DefaultConventional",
+                "action": "DefaultAction"
+            }
         }
     ]
 }

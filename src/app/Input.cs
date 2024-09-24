@@ -20,6 +20,9 @@ public record Args
 
     [Option('d', "directory", Default = ".", HelpText = "Root directory to search for DLLs", MetaValue = "<directory>")]
     public required string Directory { get; set; }
+
+    [Option('c', "config", Default = "pathfinder.json", HelpText = "Path to config file", MetaValue = "<config file>")]
+    public required string Config { get; set; }
 }
 
 public static class InputParser
