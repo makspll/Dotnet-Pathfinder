@@ -170,12 +170,17 @@ public class AssemblyQuery(ModuleDefMD module, IEnumerable<ConventionalRoute>? c
         return coalescedRoutes.ToList();
     }
 
-    static IEnumerable<MethodDef> EnumerateMethodsWhichCouldBeActions(IEnumerable<MethodDef> methods, bool excludePrivate = true)
+    static IEnumerable<MethodDef> EnumerateMethodsWhichCouldBeActions(IEnumerable<MethodDef> methods, bool excludePrivate = true, bool excludeDisabledConventionalActions = false)
     {
         foreach (var method in methods)
         {
-            if (method.IsConstructor || method.IsGetter || method.IsSetter || method.IsStatic || method.IsAbstract || (excludePrivate && !method.IsPublic))
+            if (method.IsConstructor || method.IsGetter || method.IsSetter || method.IsStatic || method.IsAbstract)
                 continue;
+            if (excludePrivate && !method.IsPublic)
+                continue;
+            if (excludeDisabledConventionalActions && method.CustomAttributes.Select(AttributeParser.ParseAttribute).OfType<RoutingAttribute>().Any(x => x.DisablesConventionalRoutes()))
+                continue;
+
             yield return method;
         }
     }
@@ -221,7 +226,7 @@ public class AssemblyQuery(ModuleDefMD module, IEnumerable<ConventionalRoute>? c
             return finalActions;
         }
 
-        foreach (var method in EnumerateMethodsWhichCouldBeActions(methods))
+        foreach (var method in EnumerateMethodsWhichCouldBeActions(methods, excludeDisabledConventionalActions: true))
         {
             var actionNameOverride = method.CustomAttributes.Select(AttributeParser.ParseAttribute).OfType<RoutingAttribute>().Select(x => x.ActionName()).OfType<string>().FirstOrDefault();
             var actionName = actionNameOverride ?? method.Name;

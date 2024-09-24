@@ -44,7 +44,12 @@ public static class AttributeParser
                 return new RouteAttribute(GetAttributeNamedArgOrConstructorArg<string>(attribute, "Template", 0));
             case "ApiControllerAttribute":
                 return new ApiControllerAttribute();
-
+            case "NonActionAttribute":
+                return new NonActionAttribute();
+            case "ActionNameAttribute":
+                return new ActionNameAttribute(GetAttributeNamedArgOrConstructorArg<string>(attribute, "Name", 0));
+            case "AreaAttribute":
+                return new AreaAttribute(GetAttributeNamedArgOrConstructorArg<string>(attribute, "NONAME", 0));
             case "HttpGetAttribute":
             case "HttpPostAttribute":
             case "HttpPutAttribute":

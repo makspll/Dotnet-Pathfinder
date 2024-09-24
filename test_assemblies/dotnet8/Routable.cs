@@ -174,6 +174,15 @@ namespace dotnet8
         public Task<OkObjectResult> NonDefaultAction() => Task.FromResult(new OkObjectResult("NonDefaultAction"));
     }
 
+    public class DefaultControllerConventional : Controller
+    {
+        [NonAction]
+        [HttpGet]
+        public Task<OkObjectResult> DefaultAction() => Task.FromResult(new OkObjectResult("DefaultConventionalController"));
+
+        public Task<OkObjectResult> NonDefaultAction() => Task.FromResult(new OkObjectResult("NonDefaultAction"));
+    }
+
 
     [ApiController]
     public class ControllerWithNoRoutes;

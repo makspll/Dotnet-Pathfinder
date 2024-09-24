@@ -83,6 +83,8 @@ public abstract class RoutingAttribute(string name)
     /// If the attribute overrides the action name, return it
     /// </summary>
     public virtual string? ActionName() => null;
+
+    public virtual bool DisablesConventionalRoutes() => false;
 }
 
 public class ApiControllerAttribute : RoutingAttribute
@@ -112,9 +114,9 @@ public class HttpAttribute(HTTPMethod method, string? route) : RoutingAttribute(
     public override HTTPMethod? HttpMethodOverride() => Method;
 }
 
-public class AreaAttribute(string area) : RoutingAttribute("Area")
+public class AreaAttribute(string? area) : RoutingAttribute("Area")
 {
-    public string AreaValue { get; init; } = area;
+    public string? AreaValue { get; init; } = area;
 
     public override string? Route() => null;
 
@@ -122,11 +124,20 @@ public class AreaAttribute(string area) : RoutingAttribute("Area")
 }
 
 
-public class ActionNameAttribute(string name) : RoutingAttribute("ActionName")
+public class ActionNameAttribute(string? name) : RoutingAttribute("ActionName")
 {
-    public string ActionNameValue { get; init; } = name;
+    public string? ActionNameValue { get; init; } = name;
 
     public override string? Route() => null;
 
     public override string? ActionName() => ActionNameValue;
+}
+
+public class NonActionAttribute : RoutingAttribute
+{
+    public NonActionAttribute() : base("NonAction") { }
+
+    public override string? Route() => null;
+
+    public override bool DisablesConventionalRoutes() => true;
 }

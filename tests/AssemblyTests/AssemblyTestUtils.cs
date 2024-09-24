@@ -189,9 +189,9 @@ namespace AssemblyTests
             var scope = AssertionScope.Current;
             if (expected == null && received != null)
             {
-                if (received.Actions.Any() && !received.Actions.All(x => x.IsConventional))
+                if (received.Actions.Any() && !received.Actions.All(x => x.IsConventional || x.Routes.Count == 0))
                 {
-                    scope.FailWith($"Controller {received.ClassName} is not expected to contain any non conventional actions");
+                    scope.FailWith($"Controller {received.ClassName} is not expected to contain any non conventional actions with routes");
                     return;
                 }
                 else
