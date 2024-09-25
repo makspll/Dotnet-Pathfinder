@@ -90,7 +90,7 @@ public class AssemblyQuery(ModuleDefMD module, IEnumerable<ConventionalRoute>? c
     {
         var allExcludingSource = allAttributes.Where(x => x != routeSource);
 
-        var otherMethods = allAttributes.Select(x => x.HttpMethodOverride()).OfType<HTTPMethod>();
+        var otherMethods = allAttributes.SelectMany(x => x.HttpMethodOverride() ?? []).OfType<HTTPMethod>();
         var sourceMethod = routeSource?.HttpMethodOverride();
 
         if (sourceMethod == null)
@@ -103,7 +103,7 @@ public class AssemblyQuery(ModuleDefMD module, IEnumerable<ConventionalRoute>? c
         else
         {
             // the more specific method override takes precedence
-            return [sourceMethod.Value];
+            return sourceMethod.ToList();
         }
 
         return [.. Enum.GetValues<HTTPMethod>()];
@@ -137,7 +137,7 @@ public class AssemblyQuery(ModuleDefMD module, IEnumerable<ConventionalRoute>? c
         // allow other routing attributes to propagate their suffix to this one if it's empty
         var propagatedSuffix = routingAttrs.FirstOrDefault(x => x.Propagation() == RoutePropagation.Propagate)?.Route();
 
-        var httpMethods = routingAttrs.Select(x => x.HttpMethodOverride()).OfType<HTTPMethod>();
+        var httpMethods = routingAttrs.SelectMany(x => x.HttpMethodOverride() ?? []).OfType<HTTPMethod>();
 
         var routes = routingAttrs.Select(s =>
         {

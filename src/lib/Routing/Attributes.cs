@@ -72,7 +72,7 @@ public abstract class RoutingAttribute(string name)
     /// <summary>
     /// If the attribute overrides the HTTP method, return it
     /// </summary>
-    public virtual HTTPMethod? HttpMethodOverride() => null;
+    public virtual IEnumerable<HTTPMethod>? HttpMethodOverride() => null;
 
     /// <summary>
     /// If the attribute defines an area for a controller, return it
@@ -111,7 +111,7 @@ public class HttpAttribute(HTTPMethod method, string? route) : RoutingAttribute(
     public string? Path { get; init; } = route;
     public override string? Route() => Path;
 
-    public override HTTPMethod? HttpMethodOverride() => Method;
+    public override IEnumerable<HTTPMethod>? HttpMethodOverride() => [Method];
 }
 
 public class AreaAttribute(string? area) : RoutingAttribute("Area")
@@ -140,4 +140,14 @@ public class NonActionAttribute : RoutingAttribute
     public override string? Route() => null;
 
     public override bool DisablesConventionalRoutes() => true;
+}
+
+public class AcceptVerbsAttribute(IEnumerable<HTTPMethod>? methods) : RoutingAttribute("AllowedMethods")
+{
+    public IEnumerable<HTTPMethod>? Methods { get; init; } = methods;
+    public string? RouteValue { get; init; }
+
+    public override string? Route() => RouteValue;
+
+    public override IEnumerable<HTTPMethod>? HttpMethodOverride() => Methods;
 }

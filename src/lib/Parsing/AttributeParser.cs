@@ -30,7 +30,7 @@ public static class AttributeParser
         }
         else
         {
-            throw new ArgumentException($"Expected argument of type {typeof(T).Name} but got {output.GetType().Name}");
+            throw new ArgumentException($"Expected argument of type {typeof(T).FullName} but got {output.GetType().FullName}");
         }
     }
 
@@ -50,6 +50,10 @@ public static class AttributeParser
                 return new ActionNameAttribute(GetAttributeNamedArgOrConstructorArg<string>(attribute, "Name", 0));
             case "AreaAttribute":
                 return new AreaAttribute(GetAttributeNamedArgOrConstructorArg<string>(attribute, "NONAME", 0));
+            case "AcceptVerbsAttribute":
+                var methods = GetAttributeNamedArgOrConstructorArg<List<CAArgument>>(attribute, "Http Methods", 0)?.Select(x => Enum.Parse<HTTPMethod>(x.Value.ToString() ?? "UNKNOWN"));
+                var routeValue = GetAttributeNamedArgOrConstructorArg<string>(attribute, "Route", -1);
+                return new AcceptVerbsAttribute(methods) { RouteValue = routeValue };
             case "HttpGetAttribute":
             case "HttpPostAttribute":
             case "HttpPutAttribute":

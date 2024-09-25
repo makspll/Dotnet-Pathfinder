@@ -163,6 +163,9 @@ namespace dotnet8
 
         [HttpPost("HttpMethodWithSameRouteAsAnotherButDifferentMethod")]
         public Task HttpMethodWithSameRouteAsAnotherButPostMethod() => Task.FromResult(new OkResult());
+
+        [AcceptVerbs("GET", "POST", Route = "acceptverbsroute")]
+        public Task AcceptVerbsRoute() => Task.FromResult(new OkResult());
     }
 
     public class DefaultConventionalController : Controller
@@ -173,7 +176,6 @@ namespace dotnet8
         [HttpGet]
         public Task<OkObjectResult> NonDefaultAction() => Task.FromResult(new OkObjectResult("NonDefaultAction"));
     }
-
     public class DefaultControllerConventional : Controller
     {
         [NonAction]
