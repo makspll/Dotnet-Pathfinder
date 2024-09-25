@@ -65,6 +65,11 @@ public abstract class RoutingAttribute(string name)
     public abstract string? Route();
 
     /// <summary>
+    /// If an attribute can generate a route if it either has a route or gets one propagated to it. If false will never generate a route
+    /// </summary>
+    public virtual bool CanGenerateRoute() => Route() != null;
+
+    /// <summary>
     /// Return the route propagation strategy of the attribute
     /// </summary>
     public virtual RoutePropagation Propagation() => RoutePropagation.None;
@@ -102,6 +107,7 @@ public class RouteAttribute(string? path) : RoutingAttribute("Route")
 
     public override string? Route() => Path;
 
+    public override bool CanGenerateRoute() => true;
     public override RoutePropagation Propagation() => RoutePropagation.Propagate;
 }
 
@@ -110,6 +116,8 @@ public class HttpAttribute(HTTPMethod method, string? route) : RoutingAttribute(
     public HTTPMethod Method { get; init; } = method;
     public string? Path { get; init; } = route;
     public override string? Route() => Path;
+
+    public override bool CanGenerateRoute() => true;
 
     public override IEnumerable<HTTPMethod>? HttpMethodOverride() => [Method];
 }
@@ -148,6 +156,8 @@ public class AcceptVerbsAttribute(IEnumerable<HTTPMethod>? methods) : RoutingAtt
     public string? RouteValue { get; init; }
 
     public override string? Route() => RouteValue;
+
+    public override bool CanGenerateRoute() => true;
 
     public override IEnumerable<HTTPMethod>? HttpMethodOverride() => Methods;
 }

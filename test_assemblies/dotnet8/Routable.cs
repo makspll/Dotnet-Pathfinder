@@ -97,7 +97,6 @@ namespace dotnet8
     }
 
     public abstract class CustomBase : Controller;
-
     public class CustomBaseInheritingController : CustomBase
     {
 
@@ -164,8 +163,45 @@ namespace dotnet8
         [HttpPost("HttpMethodWithSameRouteAsAnotherButDifferentMethod")]
         public Task HttpMethodWithSameRouteAsAnotherButPostMethod() => Task.FromResult(new OkResult());
 
+    }
+
+    [ApiController]
+    [Route("acceptverbscontroller")]
+    public class AcceptVerbsController : Controller
+    {
         [AcceptVerbs("GET", "POST", Route = "acceptverbsroute")]
         public Task AcceptVerbsRoute() => Task.FromResult(new OkResult());
+
+        [AcceptVerbs("PATCH", "DELETE")]
+        public Task AcceptVerbsWithoutRoute() => Task.FromResult(new OkResult());
+    }
+
+
+    [ApiController]
+    [Route("controllerWithPrefixButOnlyVerbsOnMethods")]
+    public class ControllerWithPrefixButOnlyVerbsOnMethods
+    {
+        [HttpGet]
+        public Task Get() => Task.FromResult(new OkResult());
+
+        [HttpPost]
+        public Task Post() => Task.FromResult(new OkResult());
+
+        [HttpPut]
+        public Task Put() => Task.FromResult(new OkResult());
+
+        [HttpDelete]
+        public Task Delete() => Task.FromResult(new OkResult());
+
+        [HttpPatch]
+        public Task Patch() => Task.FromResult(new OkResult());
+
+        [HttpOptions]
+        public Task Options() => Task.FromResult(new OkResult());
+
+        [HttpHead]
+        public Task Head() => Task.FromResult(new OkResult());
+
     }
 
     public class DefaultConventionalController : Controller
@@ -185,33 +221,30 @@ namespace dotnet8
         public Task<OkObjectResult> NonDefaultAction() => Task.FromResult(new OkObjectResult("NonDefaultAction"));
     }
 
+    public class ConventionalControllerOverriddenActionNames : Controller
+    {
+        [HttpGet]
+        [ActionName("OverridenActionName")]
+        public Task<OkObjectResult> Get() => Task.FromResult(new OkObjectResult("ConventionalControllerOverriddenActionNames"));
+
+        [HttpPost]
+        [ActionName("OverridenActionName")]
+        public Task<OkObjectResult> Post() => Task.FromResult(new OkObjectResult("ConventionalControllerOverriddenActionNamesPost"));
+    }
+
 
     [ApiController]
     public class ControllerWithNoRoutes;
 
-    [ApiController]
-    [Route("api")]
-    public class ListAllRoutesController(
-        IActionDescriptorCollectionProvider actionDescriptorCollectionProvider,
-        IEnumerable<EndpointDataSource> routeCollection
-        ) : ControllerBase
-    {
-        private readonly IActionDescriptorCollectionProvider actionDescriptorCollectionProvider = actionDescriptorCollectionProvider;
-        private readonly IEnumerable<EndpointDataSource> routeCollection = routeCollection;
-        [HttpGet]
-        [Route("attributeroutes")]
-        public Task<OkObjectResult> ListAttributeRoutes()
-        {
-            var actionDescriptors = actionDescriptorCollectionProvider.ActionDescriptors.Items.OfType<ControllerActionDescriptor>();
-            return Task.FromResult(new OkObjectResult(PathsExporter.ListAllRoutes(actionDescriptors, routeCollection, false)));
-        }
 
-        [HttpGet]
-        [Route("conventionalroutes")]
-        public Task<OkObjectResult> ListConventionalRoutes()
-        {
-            var actionDescriptors = actionDescriptorCollectionProvider.ActionDescriptors.Items.OfType<ControllerActionDescriptor>();
-            return Task.FromResult(new OkObjectResult(PathsExporter.ListAllRoutes(actionDescriptors, routeCollection, true, false)));
-        }
+    [Route("[controller]")]
+    public class ControllerWithPlaceholders : Controller
+    {
+        [HttpGet("[action]")]
+        [ActionName("OverridenActionName")]
+        public Task<OkObjectResult> Get() => Task.FromResult(new OkObjectResult("ControllerWithPlaceholders"));
+
+        [HttpPost("[action]")]
+        public Task<OkObjectResult> Post() => Task.FromResult(new OkObjectResult("ControllerWithPlaceholdersPost"));
     }
 }

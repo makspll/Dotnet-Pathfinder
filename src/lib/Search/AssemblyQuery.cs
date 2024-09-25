@@ -135,26 +135,28 @@ public class AssemblyQuery(ModuleDefMD module, IEnumerable<ConventionalRoute>? c
     {
 
         // allow other routing attributes to propagate their suffix to this one if it's empty
-        var propagatedSuffix = routingAttrs.FirstOrDefault(x => x.Propagation() == RoutePropagation.Propagate)?.Route();
+        var propagatedSuffix = routingAttrs.FirstOrDefault(x => x.Propagation() == RoutePropagation.Propagate && x.Route() != null)?.Route();
 
         var httpMethods = routingAttrs.SelectMany(x => x.HttpMethodOverride() ?? []).OfType<HTTPMethod>();
 
-        var routes = routingAttrs.Select(s =>
-        {
-            var suffix = s.Route();
-            if (suffix == null && propagatedSuffix != null)
-            {
-                suffix = propagatedSuffix;
-            }
+        var routes = routingAttrs
+            .Where(a => a.CanGenerateRoute())
+            .Select(s =>
+                {
+                    var suffix = s.Route();
+                    if (suffix == null && propagatedSuffix != null)
+                    {
+                        suffix = propagatedSuffix;
+                    }
 
-            var route = JoinRoutes(propagatedPrefix, suffix);
-            var allowedMethods = AllowedMethods(routingAttrs, s);
-            return route == "" ? null : new Route
-            {
-                Methods = allowedMethods,
-                Path = route,
-            };
-        }).OfType<Route>().ToList();
+                    var route = JoinRoutes(propagatedPrefix, suffix);
+                    var allowedMethods = AllowedMethods(routingAttrs, s);
+                    return route == "" ? null : new Route
+                    {
+                        Methods = allowedMethods,
+                        Path = route,
+                    };
+                }).OfType<Route>().ToList();
 
         // if no routing attrs and a propagated prefix is present, add a route from the propagated prefix
         if (routes.Count == 0 && propagatedPrefix != null)
@@ -468,6 +470,8 @@ public class AssemblyQuery(ModuleDefMD module, IEnumerable<ConventionalRoute>? c
                 }
             }
         }
+
+        PostProcess.PlaceholderInliner.InlinePlaceholders(attributeControllers);
 
         return attributeControllers;
     }

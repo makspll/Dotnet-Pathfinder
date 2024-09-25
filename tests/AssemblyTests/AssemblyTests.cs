@@ -55,7 +55,7 @@ namespace AssemblyTests
 
         [Theory]
         [MemberData(nameof(AllTestAssemblyDirs))]
-        public void TestNonConventionalRoutes(string testAssemblyDir)
+        public void TestAttributeRoutes(string testAssemblyDir)
         {
             var query = PrepareAssembly(testAssemblyDir);
             var controllersMeta = query.FindAllControllers();
