@@ -1,10 +1,10 @@
 using System.Diagnostics;
+using System.Net.Sockets;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
 using FluentAssertions.Execution;
-using Makspll.ReflectionUtils;
-using Makspll.ReflectionUtils.Routing;
+using Makspll.Pathfinder.Routing;
 using static AssemblyTests.AssemblyTestUtils;
 
 namespace AssemblyTests
@@ -89,27 +89,6 @@ namespace AssemblyTests
             return dllPath;
         }
 
-
-        // public record RouteInfo
-        // {
-        //     [JsonPropertyName("method")]
-        //     public string? Method { get; set; }
-        //     [JsonPropertyName("routes")]
-        //     public required string Route { get; set; }
-        //     [JsonPropertyName("action")]
-        //     public string? Action { get; set; }
-        //     [JsonPropertyName("controllerMethod")]
-        //     public string? ControllerMethod { get; set; }
-
-        //     [JsonPropertyName("expectedRoutes")]
-        //     public string? ExpectedRoute { get; set; }
-
-        //     [JsonPropertyName("expectNoRoute")]
-        //     public bool ExpectNoRoute { get; set; }
-
-        //     [JsonPropertyName("conventionalRoute")]
-        //     public bool ConventionalRoute { get; set; }
-        // }
         public static T? WaitUntillEndpointAndCall<T>(string url)
         {
             var timeout = DateTime.Now.AddSeconds(15);
@@ -133,15 +112,31 @@ namespace AssemblyTests
                 }
             }
         }
-
-        public static void RunAssemblyAndGetHTTPOutput<T>(string dllPath, string url, out T? httpOutput)
+        public static void ExpectPortFree(int port)
         {
+            using TcpClient tcpClient = new();
+            try
+            {
+                tcpClient.Connect("127.0.0.1", port);
+            }
+            catch (SocketException e)
+            {
+                if (e.SocketErrorCode != SocketError.ConnectionRefused)
+                {
+                    throw;
+                }
+            }
+        }
+
+        public static Process RunAssembly(string dllPath, int port = 5000, bool forwardOutput = false)
+        {
+
             var process = new Process
             {
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = "dotnet",
-                    Arguments = $"{dllPath}",
+                    Arguments = $"{dllPath} --urls http://localhost:{port}",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
@@ -151,11 +146,20 @@ namespace AssemblyTests
             process.Start();
 
             // Forward stdout and stderr continuously while waiting
-            process.OutputDataReceived += (sender, e) => Console.WriteLine(e.Data);
-            process.ErrorDataReceived += (sender, e) => Console.WriteLine(e.Data);
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
+            if (forwardOutput)
+            {
+                process.OutputDataReceived += (sender, e) => Console.WriteLine(e.Data);
+                process.ErrorDataReceived += (sender, e) => Console.WriteLine(e.Data);
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+            }
 
+            return process;
+        }
+
+        public static void RunAssemblyAndGetHTTPOutput<T>(string dllPath, string url, out T? httpOutput)
+        {
+            var process = RunAssembly(dllPath);
             // wait for the process to start and call the `api/allroutes` endpoint
             httpOutput = WaitUntillEndpointAndCall<T>(url);
             // shut down the process
@@ -163,16 +167,40 @@ namespace AssemblyTests
             process.WaitForExit();
         }
 
-        public static void AssertControllerMatchedReflectionMetadata(TestUtils.RouteInfo? expected, Controller? received)
+        public static string InstantiateRoute(string expected, string expectedController, string expectedAction, string expectedArea)
+        {
+            if (expected.Contains('{') || expected.Contains('}'))
+            {
+                var parsed = ConventionalRoute.Parse(expected, null).Value;
+                var instantiated = parsed.InstantiateTemplateWith(expectedController, expectedAction, expectedArea, false);
+                return instantiated;
+            }
+            else
+            {
+                return "/" + expected;
+            }
+        }
+
+        /// <summary>
+        /// Assert that the received controller matches the expected route, for an attribute based route (non-conventional)
+        /// </summary>
+        public static void AssertControllerMatchedAttributeRoute(TestUtils.RouteInfo? expected, Controller? received)
         {
             var scope = AssertionScope.Current;
             if (expected == null && received != null)
             {
-                scope.FailWith($"Controller {received.Name} is not expected to be routable");
-                return;
+                if (received.Actions.Any() && !received.Actions.All(x => x.IsConventional || x.Routes.Count == 0))
+                {
+                    scope.FailWith($"Controller {received.ClassName} is not expected to contain any non conventional actions with routes");
+                    return;
+                }
+                else
+                {
+                    return;
+                }
             }
 
-            var controller = expected?.ControllerMethod?.Split(":")[0] ?? expected?.Action;
+            var controller = $"{expected?.ControllerNamespace}::{expected?.ControllerClassName}";
 
             if (expected != null && received == null)
             {
@@ -186,22 +214,47 @@ namespace AssemblyTests
             }
 
             // find the method that matches the expected route
-            var receivedMethod = received!.Actions.FirstOrDefault(m => m.Name == expected!.ControllerMethod?.Split(":")[1]);
+            var receivedMethod = received!.Actions.FirstOrDefault(m => m.MethodName == expected!.ActionMethodName);
 
             if (receivedMethod == null)
             {
-                scope.FailWith($"{received.Namespace}::{received.Name} - {expected!.ControllerMethod} route not retrieved");
+                scope.FailWith($"{received.Namespace}::{received.ClassName} - {expected!.ActionMethodName} route not retrieved");
+                return;
+            }
+
+            if (receivedMethod.IsConventional)
+            {
+                scope.FailWith($"{received.Namespace}::{received.ClassName} - {expected!.ActionMethodName} route is conventional");
                 return;
             }
 
             // the route should match one of the expected routes
-            if (!receivedMethod.Routes.Contains(expected!.Route))
+            if (!receivedMethod.Routes.Any(r => r.Path == expected!.Routes.First()))
             {
-                scope.FailWith($"{received.Namespace}::{received.Name} - {receivedMethod.Routes} was expected to contain {expected!.Route}");
+                var allRoutesString = string.Join(", ", receivedMethod.Routes.Select(r => r.Path));
+                scope.FailWith($"{received.Namespace}::{received.ClassName} - '[{allRoutesString}]' was expected to contain {expected!.Routes.First()}");
             }
+            else
+            {
+                // check http methods
+                var matchingAction = receivedMethod.Routes.First(r => r.Path == expected!.Routes.First());
 
+                var expectedHttpMethods = expected!.HttpMethods;
+                var receivedHttpMethods = matchingAction.Methods.Select(m => m.ToVerbString().ToUpper()).ToList();
 
+                foreach (var method in Enum.GetNames<HTTPMethod>())
+                {
+                    if (expectedHttpMethods.Contains(method.ToUpper()) && !receivedHttpMethods.Contains(method.ToUpper()))
+                    {
+                        scope.FailWith($"{received.Namespace}::{received.ClassName} - {expected!.Routes.First()} was expected to support HTTP method: {method}, supported methods: {string.Join(", ", receivedHttpMethods)}");
+                    }
+                    else if (!expectedHttpMethods.Contains(method.ToUpper()) && receivedHttpMethods.Contains(method.ToUpper()))
+                    {
+                        scope.FailWith($"{received.Namespace}::{received.ClassName} - {expected!.Routes.First()} was not expected to support HTTP method: {method}, supported methods: {string.Join(", ", receivedHttpMethods)}");
+                    }
+
+                }
+            }
         }
-
     }
 }

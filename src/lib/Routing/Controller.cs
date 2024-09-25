@@ -1,4 +1,4 @@
-namespace Makspll.ReflectionUtils.Routing;
+namespace Makspll.Pathfinder.Routing;
 
 /// <summary>
 ///  Represents the concept of a WEB controller in a .NET assembly
@@ -6,9 +6,14 @@ namespace Makspll.ReflectionUtils.Routing;
 public class Controller
 {
     /// <summary>
-    /// The name of the controller
+    /// The name of the controller. This is the name of the class without the "Controller" suffix if one exists
     /// </summary>
-    public required string Name { get; init; }
+    public required string ControllerName { get; init; }
+
+    /// <summary>
+    /// The class name of the controller
+    /// </summary>
+    public required string ClassName { get; init; }
 
     /// <summary>
     /// The namespace the controller lives in
@@ -23,10 +28,20 @@ public class Controller
     /// <summary>
     /// The actions that the controller is responsible for
     /// </summary>
-    public required IEnumerable<Action> Actions { get; init; }
+    public required List<Action> Actions { get; init; }
 
     /// <summary>
     /// Attributes marking up the controller
     /// </summary>
     public required IEnumerable<RoutingAttribute> Attributes { get; init; }
+
+    public static string ParseControllerName(string className)
+    {
+        if (className.EndsWith("Controller"))
+        {
+            return className[..^"Controller".Length];
+        }
+        return className;
+    }
 }
+
