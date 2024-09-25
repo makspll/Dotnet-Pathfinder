@@ -1,5 +1,11 @@
 # Pathfinder
-Utilities and experiments in inspecting routes in web based .net assemblies.
+Finds and outputs all API routes found in a .NET assembly in textual or JSON format.
+
+## Features
+- Attribute based routing
+- Conventional routing (templates + defaults have to be specified in a config file)
+- .NET core support
+- .NET framework support incoming
 
 
 # Usage
