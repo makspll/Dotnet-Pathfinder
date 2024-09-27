@@ -6,6 +6,7 @@ Finds and outputs all API routes found in a .NET assembly in textual or JSON for
 - Conventional routing (templates + defaults have to be specified in a config file)
 - .NET core support
 - .NET framework support incoming
+- JSON and Text output
 
 
 # Usage

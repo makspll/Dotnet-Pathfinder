@@ -47,13 +47,50 @@ namespace AssemblyTests
             }
         }
 
+        public static void RunMakefileInAssembly(string testAssemblyDir)
+        {
+            var makefilePath = Path.Combine(testAssemblyDir, "makefile");
+
+            if (!File.Exists(makefilePath))
+            {
+                return;
+            }
+
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "make",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    WorkingDirectory = testAssemblyDir
+                }
+            };
+
+            process.Start();
+            process.WaitForExit();
+
+            if (process.ExitCode != 0)
+            {
+                // get the error message
+                var errorMessage = process.StandardError.ReadToEnd();
+                var outputMessage = process.StandardOutput.ReadToEnd();
+                throw new Exception($"Failed to run makefile in {testAssemblyDir}: {outputMessage}{errorMessage}");
+            }
+        }
+
         /**
          * Build a test assembly and put the dll in the specified directory, return the path to the dll
          */
         public static string BuildTestAssembly(string testAssemblyDir)
         {
+            RunMakefileInAssembly(testAssemblyDir);
+
             var testAssemblyName = Path.GetFileName(testAssemblyDir);
             var testAssemblyCsproj = Directory.EnumerateFiles(testAssemblyDir, "*.csproj").First();
+
             var process = new Process
             {
                 StartInfo = new ProcessStartInfo
