@@ -22,32 +22,49 @@ namespace AssemblyTests
 
         private ITestOutputHelper OutputHelper { get; }
 
-        private Process? process;
+        private Process? process = null;
 
         public void Dispose()
         {
             if (process != null)
             {
-                process.Kill();
-                process.WaitForExit();
+                try
+                {
+                    process.Kill(true);
+                    process.WaitForExit(TimeSpan.FromSeconds(10));
+                    process = null;
+                }
+                catch (Exception e)
+                {
+                    OutputHelper.WriteLine($"Failed to kill process: {e.Message}");
+                }
             }
         }
+
 
         public static IEnumerable<object[]> AllTestAssemblyDirs()
         {
             foreach (var dir in IterateTestAssemblyDirs())
             {
-                yield return new object[] { dir };
+                var dirname = Path.GetFileName(dir) ?? throw new Exception("Failed to get directory name");
+                yield return new object[] { dirname };
             }
         }
 
-        public AssemblyQuery PrepareAssembly(string testAssemblyDir)
+        public AssemblyQuery PrepareAssembly(string testAssemblyName)
         {
+            var forwardOutput = false;
+            if (process != null)
+            {
+                throw new Exception("Process is already running");
+            }
+
+            var testAssemblyDir = Path.Combine(GetTestAssembliesPath(), testAssemblyName);
             ExpectPortFree(5000);
-            var dllPath = BuildTestAssembly(testAssemblyDir);
+            var dllPath = BuildTestAssembly(testAssemblyDir, forwardOutput: forwardOutput);
             var configFile = Path.Combine(testAssemblyDir, "pathfinder.json");
             var query = new AssemblyQuery(dllPath, AssemblyQuery.ParseConfig(new FileInfo(configFile)) ?? []);
-            process = RunAssembly(dllPath);
+            process = RunTestAssembly(testAssemblyDir, forwardOutput: forwardOutput);
             var _ = WaitUntillEndpointAndCall<RouteInfo[]>("http://localhost:5000/api/attributeroutes") ?? throw new Exception("Failed to get route info");
             return query;
         }

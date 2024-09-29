@@ -47,13 +47,27 @@ namespace AssemblyTests
             }
         }
 
-        public static void RunMakefileInAssembly(string testAssemblyDir)
+
+        public static Process StartMakefileProcess(string testAssemblyDir, string? target = null, Dictionary<string, string>? args = null, bool forwardOutput = false)
         {
             var makefilePath = Path.Combine(testAssemblyDir, "makefile");
 
             if (!File.Exists(makefilePath))
             {
-                return;
+                throw new Exception($"Could not find makefile in {testAssemblyDir}");
+            }
+            string stringArgs = "";
+            if (args != null)
+            {
+                foreach (var arg in args)
+                {
+                    stringArgs += $" {arg.Key}={arg.Value}";
+                }
+            }
+
+            if (target != null)
+            {
+                stringArgs += $" {target}";
             }
 
             var process = new Process
@@ -61,6 +75,7 @@ namespace AssemblyTests
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = "make",
+                    Arguments = stringArgs,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
@@ -69,7 +84,31 @@ namespace AssemblyTests
                 }
             };
 
+            if (forwardOutput)
+            {
+                process.OutputDataReceived += (sender, e) => Console.WriteLine(e.Data);
+                process.ErrorDataReceived += (sender, e) => Console.WriteLine(e.Data);
+            }
+            else
+            {
+                // discard output
+                process.OutputDataReceived += (sender, e) => { };
+                process.ErrorDataReceived += (sender, e) => { };
+            }
+
             process.Start();
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
+
+
+
+            return process;
+        }
+
+        public static void RunMakefileInAssembly(string testAssemblyDir, string? target = null, bool forwardOutput = false)
+        {
+            var process = StartMakefileProcess(testAssemblyDir, target, forwardOutput: forwardOutput);
+
             process.WaitForExit();
 
             if (process.ExitCode != 0)
@@ -84,51 +123,22 @@ namespace AssemblyTests
         /**
          * Build a test assembly and put the dll in the specified directory, return the path to the dll
          */
-        public static string BuildTestAssembly(string testAssemblyDir)
+        public static string BuildTestAssembly(string testAssemblyDir, bool forwardOutput = false)
         {
-            RunMakefileInAssembly(testAssemblyDir);
+            RunMakefileInAssembly(testAssemblyDir, "build", forwardOutput: forwardOutput);
 
             var testAssemblyName = Path.GetFileName(testAssemblyDir);
             var testAssemblyCsproj = Directory.EnumerateFiles(testAssemblyDir, "*.csproj").First();
 
-            var process = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = "dotnet",
-                    Arguments = $"build {testAssemblyCsproj}",
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                }
-            };
-            process.Start();
-            process.WaitForExit();
-
-            if (process.ExitCode != 0)
-            {
-                // get the error message
-                var errorMessage = process.StandardError.ReadToEnd();
-                var outputMessage = process.StandardOutput.ReadToEnd();
-                throw new Exception($"Failed to build test assembly {testAssemblyDir}: {outputMessage}{errorMessage}");
-            }
-
             // find the dll file
             var allDlls = Directory.EnumerateFiles(testAssemblyDir, "*.dll", SearchOption.AllDirectories).ToList();
-            var dllPath = allDlls.Find(f => Path.GetFileName(f) == $"{testAssemblyName}.dll" && !f.Contains("obj"));
-
-            if (dllPath == null)
-            {
-                throw new Exception($"Could not find the dll file for test assembly {testAssemblyName} in {testAssemblyDir} among: {string.Join(", ", allDlls)}");
-            }
-
+            var dllPath = allDlls.Find(f => Path.GetFileName(f) == $"{testAssemblyName}.dll" && !f.Contains("obj")) ?? throw new Exception($"Could not find the dll file for test assembly {testAssemblyName} in {testAssemblyDir} among: {string.Join(", ", allDlls)}");
             return dllPath;
         }
 
         public static T? WaitUntillEndpointAndCall<T>(string url)
         {
-            var timeout = DateTime.Now.AddSeconds(15);
+            var timeout = DateTime.Now.AddSeconds(5);
             while (true)
             {
                 if (DateTime.Now > timeout)
@@ -165,38 +175,19 @@ namespace AssemblyTests
             }
         }
 
-        public static Process RunAssembly(string dllPath, int port = 5000, bool forwardOutput = false)
+        public static Process RunTestAssembly(string testAssemblyDir, int port = 5000, bool forwardOutput = false)
         {
 
-            var process = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = "dotnet",
-                    Arguments = $"{dllPath} --urls http://localhost:{port}",
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                }
-            };
-            process.Start();
-
-            // Forward stdout and stderr continuously while waiting
-            if (forwardOutput)
-            {
-                process.OutputDataReceived += (sender, e) => Console.WriteLine(e.Data);
-                process.ErrorDataReceived += (sender, e) => Console.WriteLine(e.Data);
-                process.BeginOutputReadLine();
-                process.BeginErrorReadLine();
-            }
+            var process = StartMakefileProcess(testAssemblyDir!, "start", new Dictionary<string, string> {
+                { "PORT", port.ToString() },
+            }, forwardOutput: forwardOutput);
 
             return process;
         }
 
-        public static void RunAssemblyAndGetHTTPOutput<T>(string dllPath, string url, out T? httpOutput)
+        public static void RunAssemblyAndGetHTTPOutput<T>(string testAssemblyPath, string url, out T? httpOutput)
         {
-            var process = RunAssembly(dllPath);
+            var process = RunTestAssembly(testAssemblyPath);
             // wait for the process to start and call the `api/allroutes` endpoint
             httpOutput = WaitUntillEndpointAndCall<T>(url);
             // shut down the process

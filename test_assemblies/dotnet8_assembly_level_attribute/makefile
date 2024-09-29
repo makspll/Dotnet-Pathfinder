@@ -8,6 +8,13 @@ COPY_FILES_LIST=$(shell cat .gitignore)
 COPY_DIR="${MAKEFILE_DIR}../dotnet8"
 COPY_TARGET="${MAKEFILE_DIR}"
 TEST_UTILS_DIR="${MAKEFILE_DIR}../TestUtils"
+PORT=5000
+
+build: copy_routes
+	@dotnet build
+start:
+	@dotnet run --urls=http://localhost:$(PORT)
+
 copy_routes:
 	@echo "Copying files from $(COPY_DIR) to $(COPY_TARGET)"
 	@for file in $(COPY_FILES_LIST); do \
