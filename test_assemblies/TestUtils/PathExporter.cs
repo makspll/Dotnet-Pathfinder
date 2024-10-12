@@ -1,9 +1,25 @@
 
-#if NET47
+
+
+
+#if NET472
+using System.Web;
+using System.Collections.ObjectModel;
+using System.Net.Http;
+using System.Web.Http.Dispatcher;
+using System.Web.Http.Routing;
 using System.Web.Routing;
+using System.Web.Http;
 using System.Collections.Generic;
 using System.Linq;
-using System.Web.Http;
+using System.Web.Http.WebHost.Routing;
+using System.Reflection;
+using System.Web.Http.Controllers;
+using System.Web.Http.Description;
+using System.Web.Http.WebHost;
+using System;
+using System.Web.Mvc;
+using System.Web.Mvc.Async;
 
 #elif NETCOREAPP
 
@@ -13,6 +29,7 @@ using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.ActionConstraints;
 using System.Collections.Generic;
 using System.Linq;
+using System;
 #endif
 
 
@@ -41,6 +58,17 @@ namespace TestUtils
 
         public string? ControllerNamespace { get; set; }
 
+        public RouteInfo Merge(RouteInfo other)
+        {
+            if (ControllerName != other.ControllerName || Action != other.Action)
+            {
+                throw new Exception($"Cannot merge `{this}` and `{other}`. Since the controller and/or actions don't match");
+            }
+
+            HttpMethods = HttpMethods.Union(other.HttpMethods);
+            Routes = Routes.Union(other.Routes);
+            return this;
+        }
     }
 
 #if NETCOREAPP
@@ -64,8 +92,11 @@ namespace TestUtils
 
 
                     var route = controller?.AttributeRouteInfo?.Template;
-                    string[] allHttpMethods = {"GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"};
-                    var httpMethods = controller!.ActionConstraints?.OfType<HttpMethodActionConstraint>().SingleOrDefault()?.HttpMethods ?? allHttpMethods;
+                    string[] allHttpMethods = { "GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS" };
+                    var httpMethods = controller!.ActionConstraints?.OfType<HttpMethodActionConstraint>().SelectMany(r => r.HttpMethods) ?? Enumerable.Empty<string>();
+                    if (httpMethods.Count() == 0)
+                        httpMethods = allHttpMethods;
+
 
                     if (route == null && !includeConventional)
                         return null;
@@ -76,7 +107,7 @@ namespace TestUtils
                         route = "/" + route;
 
 
-                    List<string> all_routes = route == null ? new List<string>(){} : new List<string>{route};
+                    List<string> all_routes = route == null ? new List<string>() { } : new List<string> { route };
 
                     if (route == null)
                     {
@@ -121,7 +152,7 @@ namespace TestUtils
                         all_routes = all_conventional_routes!;
                     }
 
-                    return new RouteInfo(httpMethods,all_routes)
+                    return new RouteInfo(httpMethods, all_routes)
                     {
                         Action = action,
                         ActionMethodName = actionMethodName,
@@ -135,22 +166,113 @@ namespace TestUtils
             return output.OfType<RouteInfo>().ToList();
         }
     }
-#elif NET47
+#elif NET472
     public static class PathExporter
     {
-        public static List<RouteInfo> ListAllRoutes(RouteCollection config, bool includeConventional = true, bool includeAttributeRoutes = true)
+        public static List<RouteInfo> ListAllRoutes(bool includeConventional = true, bool includeAttributeRoutes = true)
         {
-            // get all attribute routes
-            return config
-                .OfType<Route>()
-                .Select(r =>
-                    {
-                        return new RouteInfo(new List<string>(), new List<string> { r.Url })
-                        {
+            var output = new List<RouteInfo>();
 
-                        };
-                    }
-                ).ToList();
+            var explorer = new ApiExplorer(GlobalConfiguration.Configuration);
+
+            foreach (var routeMethod in explorer.ApiDescriptions)
+            {
+                var isAttributeRouted =
+                    routeMethod.ActionDescriptor.Properties.Any(x =>
+                        (string)x.Key == "MS_IsAttributeRouted" && (bool)x.Value);
+                var isConventional = !isAttributeRouted;
+                if (!includeAttributeRoutes && isAttributeRouted)
+                    continue;
+                if (!includeConventional && isConventional)
+                    continue;
+
+                var actionName = routeMethod.ActionDescriptor.ActionName;
+                var actionMethodName = "unknown";
+                if (routeMethod.ActionDescriptor is ReflectedHttpActionDescriptor d)
+                {
+                    actionMethodName = d.MethodInfo.Name;
+                }
+
+                var controllerName = routeMethod.ActionDescriptor.ControllerDescriptor.ControllerName;
+                var controllerClassName = routeMethod.ActionDescriptor.ControllerDescriptor.ControllerType.Name;
+                var controllerNamespace =
+                    routeMethod.ActionDescriptor.ControllerDescriptor.ControllerType.Namespace;
+                var routes = new List<string>() { routeMethod.RelativePath };
+                var methods = new List<string>() { routeMethod.HttpMethod.ToString() };
+                var routeInfo = new RouteInfo(methods, routes)
+                {
+                    Action = actionName,
+                    ActionMethodName = actionMethodName,
+                    ControllerName = controllerName,
+                    ControllerClassName = controllerClassName,
+                    ControllerNamespace = controllerNamespace,
+                };
+                output.Add(routeInfo);
+            }
+
+            var coalesced = output.GroupBy(x => (x.ControllerClassName, x.ActionMethodName)).Select(x =>
+            {
+                using var enumerator = x.GetEnumerator();
+                enumerator.MoveNext();
+                var mergeOutput = enumerator.Current;
+
+                while (enumerator.MoveNext())
+                {
+                    mergeOutput = mergeOutput!.Merge(enumerator.Current!);
+                }
+
+                return mergeOutput;
+            }).ToList();
+            
+            
+            // Process MVC routes (apparently a different routing system REEREE)
+            var attributeMVCRoutes = RouteTable.Routes.SelectMany(x =>
+            {
+                if (x.GetType().Name == "RouteCollectionRoute")
+                {
+                    var subRoutes = x.GetType()
+                        .GetField("_subRoutes", BindingFlags.NonPublic | BindingFlags.Instance);
+                    IReadOnlyCollection<RouteBase> attrRoutes = (IReadOnlyCollection<RouteBase>)subRoutes.GetValue(x);
+                    return attrRoutes.ToList();
+                }
+                else
+                {
+                    return new List<RouteBase>();
+                }
+            }).ToList();
+
+            var conventionalMVCRoutes = RouteTable.Routes.OfType<Route>();
+
+            var attributeRouteInfos = attributeMVCRoutes.OfType<Route>().Select(x =>
+            {
+                // var controllerDescriptor;
+                var actionDescriptors = (ActionDescriptor[])x.DataTokens["MS_DirectRouteActions"];
+                var actionDescriptor = actionDescriptors.SingleOrDefault();
+
+                var controllerDescriptor = actionDescriptor!.ControllerDescriptor;
+                var routes = new List<string>(){x.Url};
+                var methods = new List<string>();
+                var actionMethod = "unknown";
+                var MethodInfo = actionMethod.GetType().GetProperty("MethodInfo", BindingFlags.NonPublic | BindingFlags.Instance);
+                if (MethodInfo != null)
+                {
+                    actionMethod = ((MethodInfo)MethodInfo.GetValue(actionDescriptor)).Name;
+                }
+                return new RouteInfo(methods, routes)
+                {
+                    Action = actionDescriptor.ActionName,
+                    ActionMethodName = actionMethod,
+                    ControllerName = controllerDescriptor.ControllerName,
+                    ControllerClassName = controllerDescriptor.ControllerType.Name,
+                    ControllerNamespace = controllerDescriptor.ControllerType.Namespace,
+                    
+                };
+            }).ToList();
+           
+            
+            output = coalesced.ToList().Concat(attributeRouteInfos).ToList();
+
+            return output;
         }
     }
 

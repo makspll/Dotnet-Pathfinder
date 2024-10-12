@@ -1,7 +1,7 @@
 using System.Threading.Tasks;
 using System.Web.Mvc;
 
-namespace dotnetframework472
+namespace dotnetframework472.Mvc
 {
     
     [Route("attributecontrollerprefix2")]
@@ -22,7 +22,7 @@ namespace dotnetframework472
         public Task MultipleRoutes() => Task.FromResult(new HttpStatusCodeResult(200));
 
     }
-
+    
     public class AttributeControllerNoRoute : Controller
     {   
         [Route("attributecontrollernoroute/getWithHttpGetRoute")]

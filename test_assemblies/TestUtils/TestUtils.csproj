@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp3.1;net47</TargetFrameworks>
+    <TargetFrameworks>net472;netcoreapp3.1</TargetFrameworks>
 <!--    <TargetFramework>net47</TargetFramework> -->
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -26,6 +26,7 @@
 <!--    <Reference Include="System.Web" />-->
 <!--    <Reference Include="System.Web.Routing" />-->
     <Reference Include="System.Web.Mvc" />
+    <Reference Include="System.Web.Mvc.Routing" />
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
@@ -38,6 +39,8 @@
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Web" />
     <Reference Include="System.Web.Http" />
+    <Reference Include="System.Web.Http.WebHost" />
+    <Reference Include="System.Web.Http.WebHost.Routing" />
     <Reference Include="System.Web.Extensions" />
     <Reference Include="System.Web.Abstractions" />
     <Reference Include="System.Web.Routing" />
@@ -45,8 +48,15 @@
     <Reference Include="System.Configuration" />
     <Reference Include="System.Web.Services" />
     <Reference Include="System.EnterpriseServices" />
-    <PackageReference Include="Microsoft.AspNet.WebApi" Version="4.0.0" />
-    
+
+    <PackageReference Include="Microsoft.AspNet.WebApi" Version="5.3.0" />
+    <PackageReference Include="Microsoft.AspNet.WebApi.WebHost" Version="5.3.0" /> 
+
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNet.WebApi.Client" Version="6.0.0" />
+    <PackageReference Include="Microsoft.AspNet.WebApi.Core" Version="5.3.0" />
   </ItemGroup>
   
 
