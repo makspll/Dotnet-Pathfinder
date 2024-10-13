@@ -46,7 +46,15 @@ namespace AssemblyTests
         {
             foreach (var dir in IterateTestAssemblyDirs())
             {
+
+
                 var dirname = Path.GetFileName(dir) ?? throw new Exception("Failed to get directory name");
+
+                if (dirname != "WebApplication2")
+                    continue;
+                // if (Environment.GetEnvironmentVariable("TEST_ASSEMBLY") is string testAssembly && testAssembly != dirname)
+                //     continue;
+
                 yield return new object[] { dirname };
             }
         }

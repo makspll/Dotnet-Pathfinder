@@ -11,7 +11,7 @@ TEST_UTILS_DIR="${MAKEFILE_DIR}../TestUtils"
 PORT=5000
 
 build: copy_routes
-	@dotnet build
+	@dotnet build -f net8.0
 start:
 	@dotnet run --urls=http://localhost:$(PORT)
 

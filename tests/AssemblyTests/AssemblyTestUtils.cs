@@ -76,7 +76,7 @@ namespace AssemblyTests
                 {
                     FileName = "make",
                     Arguments = stringArgs,
-                    RedirectStandardOutput = true,
+                    RedirectStandardOutput = false,
                     RedirectStandardError = true,
                     UseShellExecute = false,
                     CreateNoWindow = true,
@@ -125,7 +125,7 @@ namespace AssemblyTests
             RunMakefileInAssembly(testAssemblyDir, "build", forwardOutput: forwardOutput);
 
             var testAssemblyName = Path.GetFileName(testAssemblyDir);
-            var testAssemblyCsproj = Directory.EnumerateFiles(testAssemblyDir, "*.csproj").First();
+            // var testAssemblyCsproj = Directory.EnumerateFiles(testAssemblyDir, "*.csproj").First();
 
             // find the dll file
             var allDlls = Directory.EnumerateFiles(testAssemblyDir, "*.dll", SearchOption.AllDirectories).ToList();
