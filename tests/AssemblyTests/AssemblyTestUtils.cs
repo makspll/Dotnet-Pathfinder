@@ -113,10 +113,7 @@ namespace AssemblyTests
 
             if (process.ExitCode != 0)
             {
-                // get the error message
-                var errorMessage = process.StandardError.ReadToEnd();
-                var outputMessage = process.StandardOutput.ReadToEnd();
-                throw new Exception($"Failed to run makefile in {testAssemblyDir}: {outputMessage}{errorMessage}");
+                throw new Exception($"Failed to run makefile in {testAssemblyDir} with exit code {process.ExitCode}, Run with forwardOutput = true to see error message");
             }
         }
 

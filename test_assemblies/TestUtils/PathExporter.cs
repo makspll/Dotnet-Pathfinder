@@ -2,7 +2,18 @@
 
 
 
-#if NET472
+#if NETCOREAPP || NET8_0_OR_GREATER
+
+using Microsoft.AspNetCore.Routing;
+using System.Reflection;
+using Microsoft.AspNetCore.Mvc.Controllers;
+using Microsoft.AspNetCore.Mvc.ActionConstraints;
+using System.Collections.Generic;
+using System.Linq;
+using System;
+
+#elif NET472
+using System.Collections.Specialized;
 using System.Web;
 using System.Collections.ObjectModel;
 using System.Net.Http;
@@ -20,16 +31,6 @@ using System.Web.Http.WebHost;
 using System;
 using System.Web.Mvc;
 using System.Web.Mvc.Async;
-
-#elif NETCOREAPP
-
-using Microsoft.AspNetCore.Routing;
-using System.Reflection;
-using Microsoft.AspNetCore.Mvc.Controllers;
-using Microsoft.AspNetCore.Mvc.ActionConstraints;
-using System.Collections.Generic;
-using System.Linq;
-using System;
 #endif
 
 
@@ -169,8 +170,16 @@ namespace TestUtils
 #elif NET472
     public static class PathExporter
     {
+        private static List<HttpMethod> _ALL_METHODS =
+            new List<HttpMethod>()
+            {
+                HttpMethod.Get, HttpMethod.Put, HttpMethod.Delete, HttpMethod.Head, HttpMethod.Options,
+                HttpMethod.Post, HttpMethod.Trace
+            };
+
         public static List<RouteInfo> ListAllRoutes(bool includeConventional = true, bool includeAttributeRoutes = true)
         {
+            var callingAssembly = Assembly.GetCallingAssembly();
             var output = new List<RouteInfo>();
 
             var explorer = new ApiExplorer(GlobalConfiguration.Configuration);
@@ -223,8 +232,8 @@ namespace TestUtils
 
                 return mergeOutput;
             }).ToList();
-            
-            
+
+
             // Process MVC routes (apparently a different routing system REEREE)
             var attributeMVCRoutes = RouteTable.Routes.SelectMany(x =>
             {
@@ -241,39 +250,199 @@ namespace TestUtils
                 }
             }).ToList();
 
-            var conventionalMVCRoutes = RouteTable.Routes.OfType<Route>();
 
-            var attributeRouteInfos = attributeMVCRoutes.OfType<Route>().Select(x =>
-            {
-                // var controllerDescriptor;
-                var actionDescriptors = (ActionDescriptor[])x.DataTokens["MS_DirectRouteActions"];
-                var actionDescriptor = actionDescriptors.SingleOrDefault();
+            var attributeMvcRouteInfos = attributeMVCRoutes.OfType<Route>().Select(ParseAttributeRoute).ToList();
+            var conventionalMVCRoutes = RouteTable.Routes
+                    .OfType<Route>()
+                    .Where(x => x.GetType() == typeof(Route))
+                    .SelectMany(x => ParseConventionalRoute(x, callingAssembly))
+                    .Where(x => !attributeMvcRouteInfos.Any(o => o.ControllerClassName == x.ControllerClassName && o.ActionMethodName == x.ActionMethodName))
+                    .ToList();
 
-                var controllerDescriptor = actionDescriptor!.ControllerDescriptor;
-                var routes = new List<string>(){x.Url};
-                var methods = new List<string>();
-                var actionMethod = "unknown";
-                var MethodInfo = actionMethod.GetType().GetProperty("MethodInfo", BindingFlags.NonPublic | BindingFlags.Instance);
-                if (MethodInfo != null)
-                {
-                    actionMethod = ((MethodInfo)MethodInfo.GetValue(actionDescriptor)).Name;
-                }
-                return new RouteInfo(methods, routes)
-                {
-                    Action = actionDescriptor.ActionName,
-                    ActionMethodName = actionMethod,
-                    ControllerName = controllerDescriptor.ControllerName,
-                    ControllerClassName = controllerDescriptor.ControllerType.Name,
-                    ControllerNamespace = controllerDescriptor.ControllerType.Namespace,
-                    
-                };
-            }).ToList();
-           
-            
-            output = coalesced.ToList().Concat(attributeRouteInfos).ToList();
+
+            output = coalesced.ToList();
+            if (includeAttributeRoutes)
+                output = output.Concat(attributeMvcRouteInfos).ToList();
+            if (includeConventional)
+                output = output.Concat(conventionalMVCRoutes).ToList();
 
             return output;
         }
+
+        public static List<RouteInfo> ParseConventionalRoute(Route route, Assembly callingAssembly)
+        {
+
+            // Exactly how this is done in mvc
+            // https://github.com/jbogard/aspnetwebstack/blob/730c683da2458430d36e3e360aba68932ba69fa4/src/System.Web.Mvc/ControllerTypeCache.cs#L86C1-L95C1
+            var controllers = callingAssembly.GetTypes().Where(t =>
+                    t.IsPublic &&
+                    t.Name.EndsWith("Controller", StringComparison.OrdinalIgnoreCase) &&
+                    !t.IsAbstract &&
+                    typeof(System.Web.Mvc.IController).IsAssignableFrom(t)
+            ).ToList();
+
+            // first if the route does not contain controller placeholder we only check one controller and that is the default one
+            if (!route.Url.Contains("{controller}"))
+            {
+                var defaultController = controllers.FirstOrDefault(x => x.Name.Substring(0, x.Name.Length - "Controller".Length) == (string)route.Defaults["controller"]);
+                if (defaultController == null)
+                    return new List<RouteInfo>();
+                controllers = new List<Type>() { defaultController };
+            }
+
+            route.Defaults.TryGetValue("action", out var defaultActionObject);
+            var stringDefaultAction = (string?)defaultActionObject;
+            if (!route.Url.Contains("{action}"))
+            {
+                // if the route does not constraint the action we need a default route or we return no routes
+                if (stringDefaultAction == null)
+                {
+                    return new List<RouteInfo>();
+                }
+            }
+            else
+            {
+                // override default if we don't care
+                stringDefaultAction = null;
+            }
+
+            var routeInfos = new List<RouteInfo>();
+            // now for each available action and controller pair, generate a route
+            foreach (var controllerType in controllers)
+            {
+                var availableActions = new List<ReflectedActionDescriptor>() { };
+                var controllerDescriptor = new ReflectedControllerDescriptor(controllerType);
+
+                // get available actions
+                var actions = controllerDescriptor.GetCanonicalActions().Select(x => (ReflectedActionDescriptor)x);
+
+                if (stringDefaultAction == null)
+                {
+                    availableActions = actions.ToList();
+                }
+                else
+                {
+                    var defaultAction = actions.FirstOrDefault(x => x.ActionName == stringDefaultAction);
+                    if (defaultAction == null)
+                        return new List<RouteInfo>();
+                    availableActions = new List<ReflectedActionDescriptor>() { defaultAction };
+                }
+
+                foreach (var action in availableActions)
+                {
+                    var instantiatedRoute = route.Url
+                        .Replace("{controller}", controllerDescriptor.ControllerName)
+                        .Replace("{action}", action.ActionName);
+
+                    var routes = new List<string>() { instantiatedRoute };
+
+                    var routeInfo = new RouteInfo(GetAllowedHttpMethods(action), routes)
+                    {
+                        Action = action.ActionName,
+                        ControllerName = controllerDescriptor.ControllerName,
+                        ControllerClassName = controllerDescriptor.ControllerType.Name,
+                        ControllerNamespace = controllerDescriptor.ControllerType.Namespace,
+                        ActionMethodName = action.MethodInfo.Name
+                    };
+                    routeInfos.Add(routeInfo);
+                }
+            }
+
+            return routeInfos.ToList();
+        }
+
+        public static RouteInfo ParseAttributeRoute(Route route)
+        {
+            var actionDescriptors = (ActionDescriptor[])route.DataTokens["MS_DirectRouteActions"];
+            var actionDescriptor = actionDescriptors.SingleOrDefault();
+
+            var controllerDescriptor = actionDescriptor!.ControllerDescriptor;
+            var routes = new List<string>() { route.Url };
+            var methods = new List<string>();
+            var actionMethod = "unknown";
+            var MethodInfo = actionDescriptor.GetType().GetRuntimeProperty("MethodInfo");
+            if (MethodInfo != null)
+            {
+                actionMethod = ((MethodInfo)MethodInfo.GetValue(actionDescriptor)).Name;
+            }
+
+            return new RouteInfo(GetAllowedHttpMethods(actionDescriptor), routes)
+            {
+                Action = actionDescriptor.ActionName,
+                ActionMethodName = actionMethod,
+                ControllerName = controllerDescriptor.ControllerName,
+                ControllerClassName = controllerDescriptor.ControllerType.Name,
+                ControllerNamespace = controllerDescriptor.ControllerType.Namespace,
+
+            };
+        }
+
+        public static List<string> GetAllowedHttpMethods(ActionDescriptor descriptor)
+        {
+            var methods = new List<string>();
+
+            if (descriptor.GetSelectors().Count == 0)
+            {
+                methods = _ALL_METHODS.Select(httpMethod => httpMethod.ToString()).ToList();
+            }
+
+            foreach (var selector in descriptor.GetSelectors())
+            {
+                foreach (var method in _ALL_METHODS)
+                {
+                    MockHttpRequest httpRequest = new MockHttpRequest(method.ToString());
+                    var context = new MockHttpContext(httpRequest);
+                    var controllerContext = new MockControllerContext(context);
+                    if (selector(controllerContext))
+                        methods.Add(method.ToString());
+                }
+            }
+
+            return methods;
+        }
+
+    }
+
+
+    public class MockHttpContext : HttpContextBase
+    {
+        private readonly HttpRequestBase _request;
+
+        public MockHttpContext(MockHttpRequest request)
+        {
+            _request = request;
+        }
+
+        public override HttpRequestBase Request => _request;
+    }
+
+    public class MockHttpRequest : HttpRequestBase
+    {
+        private readonly string _httpMethod;
+        private readonly NameValueCollection _headers;
+
+
+        public MockHttpRequest(string httpMethod)
+        {
+            _httpMethod = httpMethod;
+            _headers = new NameValueCollection();
+            _headers.Add("X-HTTP-Method-Override", httpMethod);
+        }
+
+        public override string HttpMethod => _httpMethod;
+        public override NameValueCollection Headers => _headers;
+    }
+
+    public class MockControllerContext : ControllerContext
+    {
+        private readonly MockHttpContext Context;
+
+        public MockControllerContext(MockHttpContext context)
+        {
+            this.Context = context;
+        }
+
+        public override HttpContextBase HttpContext => Context;
     }
 
 

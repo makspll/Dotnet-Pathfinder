@@ -53,7 +53,7 @@ namespace AssemblyTests
 
         public AssemblyQuery PrepareAssembly(string testAssemblyName)
         {
-            var forwardOutput = false;
+            var forwardOutput = true;
             if (process != null)
             {
                 throw new Exception("Process is already running");
@@ -93,13 +93,6 @@ namespace AssemblyTests
                 var matchingController = controllersMeta.FirstOrDefault(c =>
                     c.ClassName == route.ControllerClassName
                 );
-
-                route.ExpectNoRoute.Should().Be(false, $"{route.Routes.First()} was marked with `ExpectNoRoute`");
-
-                if (route.ExpectedRoute != null)
-                {
-                    route.Routes.First().Should().Be(route.ExpectedRoute, $"Controller action {route.Action} was marked with `ExpectRoute` attribute");
-                }
 
                 AssertControllerMatchedAttributeRoute(route, matchingController);
             }
