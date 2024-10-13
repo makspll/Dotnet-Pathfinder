@@ -56,6 +56,10 @@ namespace AssemblyTests
             {
                 throw new Exception($"Could not find makefile in {testAssemblyDir}");
             }
+            if (!Directory.Exists(testAssemblyDir))
+            {
+                throw new DirectoryNotFoundException($"The directory {testAssemblyDir} does not exist.");
+            }
             string stringArgs = "";
             if (args != null)
             {
@@ -75,12 +79,12 @@ namespace AssemblyTests
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = "make",
-                    Arguments = stringArgs,
-                    RedirectStandardOutput = false,
+                    Arguments = $"-f {testAssemblyDir}/makefile " + stringArgs,
+                    RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
                     CreateNoWindow = true,
-                    WorkingDirectory = testAssemblyDir
+                    WorkingDirectory = testAssemblyDir,
                 }
             };
 
@@ -107,7 +111,7 @@ namespace AssemblyTests
 
         public static void RunMakefileInAssembly(string testAssemblyDir, string? target = null, bool forwardOutput = false)
         {
-            var process = StartMakefileProcess(testAssemblyDir, target, forwardOutput: forwardOutput);
+            var process = StartMakefileProcess(testAssemblyDir + "/", target, forwardOutput: forwardOutput);
 
             process.WaitForExit();
 
@@ -125,7 +129,6 @@ namespace AssemblyTests
             RunMakefileInAssembly(testAssemblyDir, "build", forwardOutput: forwardOutput);
 
             var testAssemblyName = Path.GetFileName(testAssemblyDir);
-            // var testAssemblyCsproj = Directory.EnumerateFiles(testAssemblyDir, "*.csproj").First();
 
             // find the dll file
             var allDlls = Directory.EnumerateFiles(testAssemblyDir, "*.dll", SearchOption.AllDirectories).ToList();

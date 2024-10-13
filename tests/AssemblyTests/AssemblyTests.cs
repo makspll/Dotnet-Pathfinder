@@ -46,14 +46,10 @@ namespace AssemblyTests
         {
             foreach (var dir in IterateTestAssemblyDirs())
             {
-
-
                 var dirname = Path.GetFileName(dir) ?? throw new Exception("Failed to get directory name");
 
-                if (dirname != "WebApplication2")
+                if (Environment.GetEnvironmentVariable("TEST_ASSEMBLY") is string testAssembly && testAssembly != dirname)
                     continue;
-                // if (Environment.GetEnvironmentVariable("TEST_ASSEMBLY") is string testAssembly && testAssembly != dirname)
-                //     continue;
 
                 yield return new object[] { dirname };
             }
@@ -61,7 +57,7 @@ namespace AssemblyTests
 
         public AssemblyQuery PrepareAssembly(string testAssemblyName)
         {
-            var forwardOutput = true;
+            var forwardOutput = Environment.GetEnvironmentVariable("FORWARD_OUTPUT") != null;
             if (process != null)
             {
                 throw new Exception("Process is already running");
