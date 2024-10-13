@@ -92,7 +92,6 @@ namespace AssemblyTests
 
             if (!forwardOutput)
             {
-
                 Task.Run(() => ReadStreamAsync(process.StandardOutput));
                 Task.Run(() => ReadStreamAsync(process.StandardError));
             }

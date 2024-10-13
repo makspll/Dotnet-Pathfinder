@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Mvc.ActionConstraints;
 using System.Collections.Generic;
 using System.Linq;
 using System;
+using System.Collections;
 
 #elif NET472
 using System.Collections.Specialized;
@@ -162,9 +163,20 @@ namespace TestUtils
                         ControllerClassName = controllerClassName
                     };
                 }
-            );
+            ).OfType<RouteInfo>().ToList();
 
-            return output.OfType<RouteInfo>().ToList();
+            output.ForEach(x => {
+                x.Routes = x.Routes.Select(r => {
+                    if (!r.StartsWith("/")){
+                        r = "/" + r;
+                    }
+                    if (r.EndsWith("/"))
+                        r = r.Substring(0, r.Length - 1);
+                    return r;
+                });
+            });
+
+            return output.ToList();;
         }
     }
 #elif NET472
@@ -265,6 +277,17 @@ namespace TestUtils
                 output = output.Concat(attributeMvcRouteInfos).ToList();
             if (includeConventional)
                 output = output.Concat(conventionalMVCRoutes).ToList();
+
+            output.ForEach(x => {
+                x.Routes = x.Routes.Select(r => {
+                    if (!r.StartsWith("/")){
+                        r = "/" + r;
+                    }
+                    if (r.EndsWith("/"))
+                        r = r.Substring(0, r.Length - 1);
+                    return r;
+                });
+            });
 
             return output;
         }

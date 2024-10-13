@@ -48,8 +48,15 @@ public class ConventionalRoute
                     parts.Add(part.DefaultValue ?? "");
             }
         }
+        var output = string.Join('/', parts);
 
-        return '/' + string.Join('/', parts);
+        if (!output.StartsWith('/'))
+            output = '/' + output;
+
+        if (output.EndsWith('/'))
+            output = output[..^1];
+
+        return output;
     }
 
     /**
