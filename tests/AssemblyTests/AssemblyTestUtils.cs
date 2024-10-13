@@ -80,33 +80,34 @@ namespace AssemblyTests
                 {
                     FileName = "make",
                     Arguments = $"-f {testAssemblyDir}/makefile " + stringArgs,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
+                    RedirectStandardOutput = !forwardOutput,
+                    RedirectStandardError = !forwardOutput,
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     WorkingDirectory = testAssemblyDir,
                 }
             };
 
-            if (forwardOutput)
-            {
-                process.OutputDataReceived += (sender, e) => Console.WriteLine(e.Data);
-                process.ErrorDataReceived += (sender, e) => Console.WriteLine(e.Data);
-            }
-            else
-            {
-                // discard output
-                process.OutputDataReceived += (sender, e) => { };
-                process.ErrorDataReceived += (sender, e) => { };
-            }
-
             process.Start();
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
 
+            if (!forwardOutput)
+            {
+
+                Task.Run(() => ReadStreamAsync(process.StandardOutput));
+                Task.Run(() => ReadStreamAsync(process.StandardError));
+            }
 
 
             return process;
+        }
+
+        private static async Task ReadStreamAsync(StreamReader streamReader)
+        {
+            char[] buffer = new char[4096];
+            while (await streamReader.ReadAsync(buffer, 0, buffer.Length) > 0)
+            {
+                // Optionally process the output here
+            }
         }
 
         public static void RunMakefileInAssembly(string testAssemblyDir, string? target = null, bool forwardOutput = false)
