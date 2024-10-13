@@ -205,7 +205,7 @@ namespace AssemblyTests
             }
             else
             {
-                return "/" + expected;
+                return expected;
             }
         }
 
@@ -228,11 +228,11 @@ namespace AssemblyTests
                 }
             }
 
-            var controller = $"{expected?.ControllerNamespace}::{expected?.ControllerClassName}";
+            var controller = $"{expected?.ControllerNamespace}::{expected?.ControllerClassName ?? expected?.ControllerName}";
 
             if (expected != null && received == null)
             {
-                scope.FailWith($"Controller ${controller} is expected to be routable");
+                scope.FailWith($"Controller {expected} is expected to be routable");
                 return;
             }
 

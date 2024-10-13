@@ -1,7 +1,7 @@
 
 
 
-
+using System.Text.Json.Serialization;
 #if NETCOREAPP || NET8_0_OR_GREATER
 
 using Microsoft.AspNetCore.Routing;
@@ -41,23 +41,36 @@ namespace TestUtils
 
     public class RouteInfo
     {
+        public RouteInfo()
+        {
+            HttpMethods = new List<string>();
+            Routes = new List<string>();
+        }
+
         public RouteInfo(IEnumerable<string> httpMethods, IEnumerable<string> routes)
         {
             HttpMethods = httpMethods;
             Routes = routes;
         }
 
+        [JsonPropertyName("httpMethods")]
         public IEnumerable<string> HttpMethods { get; set; }
+        [JsonPropertyName("routes")]
         public IEnumerable<string> Routes { get; set; }
 
+        [JsonPropertyName("action")]
         public string? Action { get; set; }
 
+        [JsonPropertyName("actionMethodName")]
         public string? ActionMethodName { get; set; }
 
+        [JsonPropertyName("controllerName")]
         public string? ControllerName { get; set; }
 
+        [JsonPropertyName("controllerClassName")]
         public string? ControllerClassName { get; set; }
 
+        [JsonPropertyName("controllerNamespace")]
         public string? ControllerNamespace { get; set; }
 
         public RouteInfo Merge(RouteInfo other)
@@ -70,6 +83,15 @@ namespace TestUtils
             HttpMethods = HttpMethods.Union(other.HttpMethods);
             Routes = Routes.Union(other.Routes);
             return this;
+        }
+
+        public override string ToString()
+        {
+            var actionString = Action != ActionMethodName ? $"{ActionMethodName}({Action})" : ActionMethodName;
+            var controllerString = ControllerName != ControllerClassName ? $"{ControllerClassName}({ControllerName})" : ControllerClassName;
+            var httpMethodsString = string.Join(", ", HttpMethods ?? new List<string>());
+            var routes = string.Join(", ", Routes ?? new List<string>());
+            return $"{ControllerNamespace}::{controllerString}::{actionString} - {httpMethodsString} - [{routes}]";
         }
     }
 
