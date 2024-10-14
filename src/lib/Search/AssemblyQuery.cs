@@ -336,7 +336,7 @@ public class AssemblyQuery(ModuleDefMD module, IEnumerable<ConventionalRoute>? c
             return true;
         }
 
-        if (InheritsFrom(type, "Controller") || InheritsFrom(type, "ControllerBase"))
+        if (InheritsFrom(type, "Controller") || InheritsFrom(type, "ControllerBase") || InheritsFrom(type, "ApiController"))
         {
             return true;
         }
