@@ -155,6 +155,7 @@ namespace AssemblyTests
                 {
                     foreach (var route in action.Routes)
                     {
+                        var failedMethods = new List<HTTPMethod>();
                         foreach (var method in Enum.GetValues<HTTPMethod>())
                         {
                             var request = new HttpRequestMessage(method.ToHttpMethod(), $"http://localhost:5000{route.Path}");
@@ -162,15 +163,21 @@ namespace AssemblyTests
                             {
                                 var response = client.Send(request);
                                 var expectSuccess = route.Methods.Contains(method);
+
                                 if (!response.IsSuccessStatusCode && expectSuccess)
                                 {
-                                    AssertionScope.Current.FailWith($"Failed to access {controller.Namespace}::{controller.ClassName} - {route.Path} with {method}");
+                                    failedMethods.Add(method);
                                 }
                             }
-                            catch (Exception e)
+                            catch
                             {
-                                AssertionScope.Current.FailWith($"Failed to access {controller.Namespace}::{controller.ClassName} - {route.Path} with {method} - {e.Message}");
+                                failedMethods.Add(method);
                             }
+                        }
+                        if (failedMethods.Count != 0)
+                        {
+                            var methods = string.Join(", ", failedMethods.Select(m => m.ToString()));
+                            AssertionScope.Current.FailWith($"Failed to access {controller.Namespace}::{controller.ClassName}::{action.MethodName} - {route.Path} with [{methods}]");
                         }
                     }
                 }

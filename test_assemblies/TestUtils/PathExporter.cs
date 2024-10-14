@@ -1,9 +1,8 @@
 
 
 
-using System.Text.Json.Serialization;
 #if NETCOREAPP || NET8_0_OR_GREATER
-
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Routing;
 using System.Reflection;
 using Microsoft.AspNetCore.Mvc.Controllers;
@@ -53,24 +52,39 @@ namespace TestUtils
             Routes = routes;
         }
 
+#if NETCOREAPP || NET8_0_OR_GREATER
         [JsonPropertyName("httpMethods")]
+#endif
         public IEnumerable<string> HttpMethods { get; set; }
+
+#if NETCOREAPP || NET8_0_OR_GREATER
         [JsonPropertyName("routes")]
+#endif
         public IEnumerable<string> Routes { get; set; }
 
+#if NETCOREAPP || NET8_0_OR_GREATER
         [JsonPropertyName("action")]
+#endif
         public string? Action { get; set; }
 
+#if NETCOREAPP || NET8_0_OR_GREATER
         [JsonPropertyName("actionMethodName")]
+#endif
         public string? ActionMethodName { get; set; }
 
+#if NETCOREAPP || NET8_0_OR_GREATER
         [JsonPropertyName("controllerName")]
+#endif
         public string? ControllerName { get; set; }
 
+#if NETCOREAPP || NET8_0_OR_GREATER
         [JsonPropertyName("controllerClassName")]
+#endif
         public string? ControllerClassName { get; set; }
 
+#if NETCOREAPP || NET8_0_OR_GREATER
         [JsonPropertyName("controllerNamespace")]
+#endif
         public string? ControllerNamespace { get; set; }
 
         public RouteInfo Merge(RouteInfo other)
