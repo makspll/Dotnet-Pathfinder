@@ -1,6 +1,7 @@
 using System.Text.Json;
 using ANSIConsole;
 using dnlib.DotNet;
+using Makspll.Pathfinder.Intermediate;
 using Makspll.Pathfinder.Parsing;
 using Makspll.Pathfinder.Routing;
 using Makspll.Pathfinder.RoutingConfig;
@@ -172,21 +173,6 @@ public class AssemblyQuery(ModuleDefMD module, IEnumerable<ConventionalRoute>? c
         return coalescedRoutes.ToList();
     }
 
-    static IEnumerable<MethodDef> EnumerateMethodsWhichCouldBeActions(IEnumerable<MethodDef> methods, bool excludePrivate = true, bool excludeDisabledConventionalActions = false)
-    {
-        foreach (var method in methods)
-        {
-            if (method.IsConstructor || method.IsGetter || method.IsSetter || method.IsStatic || method.IsAbstract)
-                continue;
-            if (excludePrivate && !method.IsPublic)
-                continue;
-            if (excludeDisabledConventionalActions && method.CustomAttributes.Select(AttributeParser.ParseAttribute).OfType<RoutingAttribute>().Any(x => x.DisablesConventionalRoutes()))
-                continue;
-
-            yield return method;
-        }
-    }
-
     static HTTPMethod? ActionNameToVerb(string name)
     {
         foreach (var verb in Enum.GetNames<HTTPMethod>())
@@ -201,14 +187,14 @@ public class AssemblyQuery(ModuleDefMD module, IEnumerable<ConventionalRoute>? c
         return null;
     }
 
-    List<Routing.Action> FindConventionalActions(ConventionalRoute route, TypeDef controllerType, IEnumerable<MethodDef> methods)
+    List<Routing.Action> FindConventionalActions(ConventionalRoute route, ControllerCandidate controllerCandidate)
     {
         // calculating a conventional routes is simple, we fill in the values of the route template if we match, leave the rest as parameters 
         // https://learn.microsoft.com/en-us/aspnet/web-api/overview/web-api-routing-and-actions/routing-and-action-selection
 
         var controller = route.Controller;
         var controllerDefault = controller?.DefaultValue ?? route.Defaults?.GetValueOrDefault("controller") ?? null;
-        var controllerName = Controller.ParseControllerName(controllerType.Name);
+        var controllerName = Controller.ParseControllerName(controllerCandidate.Type.Name);
 
         var action = route.Action;
         var actionDefault = action?.DefaultValue ?? route.Defaults?.GetValueOrDefault("action");
@@ -216,9 +202,8 @@ public class AssemblyQuery(ModuleDefMD module, IEnumerable<ConventionalRoute>? c
         var area = route.Area;
         var areaDefault = area?.DefaultValue ?? route.Defaults?.GetValueOrDefault("area");
 
-        var controllerRoutingAttrs = controllerType.CustomAttributes.Select(AttributeParser.ParseAttribute).OfType<RoutingAttribute>().ToList();
 
-        var areaAttribute = controllerRoutingAttrs.Select(x => x.Area()).OfType<string>().FirstOrDefault();
+        var areaAttribute = controllerCandidate.RoutingAttributes.Select(x => x.Area()).OfType<string>().FirstOrDefault();
         var areaName = areaAttribute ?? area?.DefaultValue ?? null; // TODO; areas
         var finalActions = new List<Routing.Action>();
 
@@ -228,10 +213,10 @@ public class AssemblyQuery(ModuleDefMD module, IEnumerable<ConventionalRoute>? c
             return finalActions;
         }
 
-        foreach (var method in EnumerateMethodsWhichCouldBeActions(methods, excludeDisabledConventionalActions: true))
+        foreach (var actionCandidate in ActionFinder.FindConventionalActions(controllerCandidate))
         {
-            var actionNameOverride = method.CustomAttributes.Select(AttributeParser.ParseAttribute).OfType<RoutingAttribute>().Select(x => x.ActionName()).OfType<string>().FirstOrDefault();
-            var actionName = actionNameOverride ?? method.Name;
+            var actionNameOverride = actionCandidate.RoutingAttributes.FirstOrDefault(x => x.ActionName() != null)?.ActionName();
+            var actionName = actionNameOverride ?? actionCandidate.Method.Name;
             string instantiatedRoute = route.InstantiateTemplateWith(controllerName, actionName, areaName);
 
             var routedAction = action == null ? actionDefault : actionName;
@@ -242,7 +227,6 @@ public class AssemblyQuery(ModuleDefMD module, IEnumerable<ConventionalRoute>? c
                 continue;
             }
 
-            var routingAttrs = method.CustomAttributes.Select(AttributeParser.ParseAttribute).OfType<RoutingAttribute>().ToList();
             List<HTTPMethod> allowedMethods;
             if (routedController != null && routedAction == null && SearchFeatures.Contains(QueryFeature.AutomaticActionDiscoveryWhenNoParameterOrDefault))
             {
@@ -252,7 +236,7 @@ public class AssemblyQuery(ModuleDefMD module, IEnumerable<ConventionalRoute>? c
             else if (routedController != null && routedAction != null)
             {
                 // normal routing with either fully specified {controller} and {action} parameters or defaults if these are missing
-                allowedMethods = AllowedMethods(routingAttrs, null);
+                allowedMethods = AllowedMethods(actionCandidate.RoutingAttributes, null);
             }
             else
             {
@@ -262,7 +246,7 @@ public class AssemblyQuery(ModuleDefMD module, IEnumerable<ConventionalRoute>? c
 
             finalActions.Add(new Routing.Action
             {
-                MethodName = method.Name,
+                MethodName = actionCandidate.Method.Name,
                 Routes =
                 [
                     new() {
@@ -271,7 +255,7 @@ public class AssemblyQuery(ModuleDefMD module, IEnumerable<ConventionalRoute>? c
                         }
                 ],
                 IsConventional = true,
-                Attributes = routingAttrs
+                Attributes = actionCandidate.RoutingAttributes
             });
 
         }
@@ -280,24 +264,19 @@ public class AssemblyQuery(ModuleDefMD module, IEnumerable<ConventionalRoute>? c
         return finalActions;
     }
 
-    static List<Routing.Action> FindActions(IEnumerable<MethodDef> methods, string? propagatedPrefix)
+    static List<Routing.Action> FindActions(ControllerCandidate controller, string? propagatedPrefix)
     {
         var actions = new List<Routing.Action>();
-        foreach (var method in EnumerateMethodsWhichCouldBeActions(methods))
+        foreach (var method in ActionFinder.FindActions(controller))
         {
 
-            var routingAttrs = method.CustomAttributes
-                .Select(AttributeParser.ParseAttribute)
-                .OfType<RoutingAttribute>()
-                .ToList();
-
-            List<Route> routes = CalculateAttributeRoutes(routingAttrs, propagatedPrefix);
+            List<Route> routes = CalculateAttributeRoutes(method.RoutingAttributes, propagatedPrefix);
 
             var action = new Routing.Action
             {
-                MethodName = method.Name,
+                MethodName = method.Method.Name,
                 Routes = routes,
-                Attributes = routingAttrs,
+                Attributes = method.RoutingAttributes,
                 IsConventional = false
             };
 
@@ -307,73 +286,14 @@ public class AssemblyQuery(ModuleDefMD module, IEnumerable<ConventionalRoute>? c
         return actions;
     }
 
-    /**
-     * Recursively traverses the inheritance tree to find the given base type, if the assembly is not loaded it will not find all base types
-     */
-    static public bool InheritsFrom(ITypeDefOrRef? type, string basetype)
-    {
-        if (type == null)
-            return false;
-        else
-        {
-            var basetypeType = type.GetBaseType();
-            if (basetypeType == null)
-                return false;
-            else if (basetypeType.Name.String == basetype)
-                return true;
-            else
-                return InheritsFrom(basetypeType, basetype);
-        }
-    }
-
-    static public bool IsController(TypeDef type, IEnumerable<RoutingAttribute> attributes)
-    {
-        if (type.IsAbstract)
-            return false;
-
-        if (attributes.Any(x => x is ApiControllerAttribute))
-        {
-            return true;
-        }
-
-        if (InheritsFrom(type, "Controller") || InheritsFrom(type, "ControllerBase") || InheritsFrom(type, "ApiController"))
-        {
-            return true;
-        }
-
-        return false;
-    }
-
-    public IEnumerable<TypeDef> EnumerateControllerTypes()
-    {
-        foreach (var type in LoadedModule.GetTypes())
-        {
-            var attributes = type.CustomAttributes.Select(AttributeParser.ParseAttribute).OfType<RoutingAttribute>().ToList();
-            if (IsController(type, attributes))
-            {
-                yield return type;
-            }
-        }
-    }
-
-    /**
-    * Finds all controllers, or if names are provided, finds the controllers matching those conventional names.
-    * If a conventional route template is passed, will ignore attribute routing and generate routes based on the template.
-    **/
-    List<Controller> FindControllers(ConventionalRoute? conventionalRoute = null, params string[] names)
+    List<Controller> FindControllers(ConventionalRoute? conventionalRoute = null)
     {
         var types = LoadedModule.GetTypes();
         var controllers = new List<Controller>();
-        foreach (var type in EnumerateControllerTypes())
+        foreach (var controllerCandidate in ControllerFinder.FindControllers(LoadedModule))
         {
-            if (names.Length > 0 && !names.Any(x => x == type.Name || x == $"{type.Name}Controller"))
-            {
-                continue;
-            }
-
             // figure out if the controller has a route it propagates to its actions
-            var attributes = type.CustomAttributes.Select(AttributeParser.ParseAttribute).OfType<RoutingAttribute>().ToList();
-            var routePrefixes = attributes.Where(x => x.Propagation() == RoutePropagation.Propagate && x.Route() != null).Select(x => x.Route());
+            var routePrefixes = controllerCandidate.RoutingAttributes.Where(x => x.Propagation() == RoutePropagation.Propagate && x.Route() != null).Select(x => x.Route());
             if (!routePrefixes.Any())
                 routePrefixes = [null];
 
@@ -381,14 +301,14 @@ public class AssemblyQuery(ModuleDefMD module, IEnumerable<ConventionalRoute>? c
 
             if (conventionalRoute != null)
             {
-                actions.AddRange(FindConventionalActions(conventionalRoute, type, type.Methods));
+                actions.AddRange(FindConventionalActions(conventionalRoute, controllerCandidate));
             }
             else
             {
 
                 foreach (var routePrefix in routePrefixes)
                 {
-                    foreach (var newAction in FindActions(type.Methods, routePrefix))
+                    foreach (var newAction in FindActions(controllerCandidate, routePrefix))
                     {
                         var existing = actions.FirstOrDefault(x => x.MethodName == newAction.MethodName);
                         if (existing == null)
@@ -401,12 +321,12 @@ public class AssemblyQuery(ModuleDefMD module, IEnumerable<ConventionalRoute>? c
 
             var controller = new Controller
             {
-                ControllerName = Controller.ParseControllerName(type.Name),
-                ClassName = type.Name,
-                Namespace = type.Namespace,
+                ControllerName = Controller.ParseControllerName(controllerCandidate.Type.Name),
+                ClassName = controllerCandidate.Type.Name,
+                Namespace = controllerCandidate.Type.Namespace,
                 Prefix = routePrefixes.FirstOrDefault(),
                 Actions = actions,
-                Attributes = attributes
+                Attributes = controllerCandidate.RoutingAttributes
             };
             controllers.Add(controller);
         }
