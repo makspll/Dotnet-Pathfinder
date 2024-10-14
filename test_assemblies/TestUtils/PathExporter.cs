@@ -1,6 +1,8 @@
 
 
 
+using Newtonsoft.Json;
+
 #if NETCOREAPP || NET8_0_OR_GREATER
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Routing;
@@ -55,36 +57,43 @@ namespace TestUtils
 #if NETCOREAPP || NET8_0_OR_GREATER
         [JsonPropertyName("httpMethods")]
 #endif
+        [JsonProperty("httpMethods")]
         public IEnumerable<string> HttpMethods { get; set; }
 
 #if NETCOREAPP || NET8_0_OR_GREATER
         [JsonPropertyName("routes")]
 #endif
+        [JsonProperty("routes")]
         public IEnumerable<string> Routes { get; set; }
 
 #if NETCOREAPP || NET8_0_OR_GREATER
         [JsonPropertyName("action")]
 #endif
+        [JsonProperty("action")]
         public string? Action { get; set; }
 
 #if NETCOREAPP || NET8_0_OR_GREATER
         [JsonPropertyName("actionMethodName")]
 #endif
+        [JsonProperty("actionMethodName")]
         public string? ActionMethodName { get; set; }
 
 #if NETCOREAPP || NET8_0_OR_GREATER
         [JsonPropertyName("controllerName")]
 #endif
+        [JsonProperty("controllerName")]
         public string? ControllerName { get; set; }
 
 #if NETCOREAPP || NET8_0_OR_GREATER
         [JsonPropertyName("controllerClassName")]
 #endif
+        [JsonProperty("controllerClassName")]
         public string? ControllerClassName { get; set; }
 
 #if NETCOREAPP || NET8_0_OR_GREATER
         [JsonPropertyName("controllerNamespace")]
 #endif
+        [JsonProperty("controllerNamespace")]
         public string? ControllerNamespace { get; set; }
 
         public RouteInfo Merge(RouteInfo other)
