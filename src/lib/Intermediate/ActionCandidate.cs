@@ -12,7 +12,7 @@ public class ActionCandidate
     public IList<Route> Routes { get; set; } = [];
     public IList<Route> ConventionalRoutes { get; set; } = [];
 
-    public string ActionName => RoutingAttributes.FirstOrDefault(x => x.ActionName() != null)?.ActionName() ?? Method.Name;
+    public string ActionName(FrameworkVersion version) => RoutingAttributes.FirstOrDefault(x => x.ActionName(version) != null)?.ActionName(version) ?? Method.Name;
 }
 
 public record PropagatedRoute

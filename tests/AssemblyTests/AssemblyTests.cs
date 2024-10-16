@@ -4,7 +4,6 @@ using FluentAssertions.Execution;
 using Xunit.Abstractions;
 using System.Text.Json;
 using Makspll.Pathfinder.Search;
-using Makspll.Pathfinder.Serialization;
 using TestUtils;
 using System.Diagnostics;
 using Makspll.Pathfinder.Routing;
@@ -84,7 +83,6 @@ namespace AssemblyTests
             var serializationOptions = new JsonSerializerOptions
             {
                 WriteIndented = true,
-                Converters = { new RoutingAttributeConverter() }
             };
 
             using var scope = new AssertionScope();

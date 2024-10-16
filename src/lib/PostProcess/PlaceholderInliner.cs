@@ -1,10 +1,13 @@
+using Makspll.Pathfinder.Intermediate;
 using Makspll.Pathfinder.Routing;
 
 namespace Makspll.Pathfinder.PostProcess;
 
-public class PlaceholderInliner
+public class PlaceholderInliner(FrameworkVersion version)
 {
-    public static void InlinePlaceholders(IEnumerable<Controller> controllers)
+    private readonly FrameworkVersion _version = version;
+
+    public void InlinePlaceholders(IEnumerable<ControllerCandidate> controllers)
     {
         foreach (var controller in controllers)
         {
@@ -18,8 +21,7 @@ public class PlaceholderInliner
                     }
                     if (route.Path.Contains("[action]"))
                     {
-                        var actionNameOverride = action.Attributes.FirstOrDefault(x => x.ActionName() != null)?.ActionName();
-                        route.Path = route.Path.Replace("[action]", actionNameOverride ?? action.MethodName);
+                        route.Path = route.Path.Replace("[action]", action.ActionName(_version));
                     }
                 }
             }

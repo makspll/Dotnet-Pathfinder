@@ -3,9 +3,11 @@ using Makspll.Pathfinder.Routing;
 
 namespace Makspll.Pathfinder.PostProcess;
 
-public static class CandidateConverter
+public class CandidateConverter(FrameworkVersion version)
 {
-    public static IList<Controller> ConvertCandidates(IEnumerable<ControllerCandidate> controllers)
+    readonly FrameworkVersion _version = version;
+
+    public IList<Controller> ConvertCandidates(IEnumerable<ControllerCandidate> controllers)
     {
         return controllers.Select(controller =>
             new Controller
@@ -19,9 +21,9 @@ public static class CandidateConverter
                     var isConventional = !action.Routes.Any() && action.ConventionalRoutes.Any();
                     return new Routing.Action
                     {
-                        Name = action.ActionName,
+                        Name = action.ActionName(_version),
                         MethodName = action.Method.Name,
-                        Attributes = action.RoutingAttributes,
+                        Attributes = action.RoutingAttributes.Select(x => x.IntoSerializedAttribute(_version)),
                         IsConventional = isConventional,
                         Routes = isConventional ? [.. action.ConventionalRoutes] : [.. action.Routes]
                     };

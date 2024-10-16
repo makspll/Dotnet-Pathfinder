@@ -3,15 +3,17 @@ using Makspll.Pathfinder.Routing;
 
 namespace Makspll.Pathfinder.Search;
 
-public static class RouteCalculator
+public class RouteCalculator(FrameworkVersion version)
 {
 
-    private static Route? CalculateRoute(ActionCandidate action, RoutingAttribute? routeCandidate, string? propagatedPrefix)
+    private readonly FrameworkVersion _version = version;
+
+    private Route? CalculateRoute(ActionCandidate action, RoutingAttribute? routeCandidate, string? propagatedPrefix)
     {
         string? suffix = null;
         if (routeCandidate != null)
         {
-            suffix = routeCandidate.Route() ?? action.PropagatedRoutes.FirstOrDefault(x => !x.FromController)?.Prefix;
+            suffix = routeCandidate.Route(_version) ?? action.PropagatedRoutes.FirstOrDefault(x => !x.FromController)?.Prefix;
         }
 
         var path = Join(propagatedPrefix, suffix);
@@ -25,7 +27,7 @@ public static class RouteCalculator
             Path = path
         };
     }
-    public static void PopulateRoutes(ActionCandidate action)
+    public void PopulateRoutes(ActionCandidate action)
     {
         var routes = new List<Route>();
 
@@ -35,16 +37,21 @@ public static class RouteCalculator
         if (!propagatedControllerRoutes.Any())
             propagatedControllerRoutes = [null];
 
-        foreach (var controllerPropagations in propagatedControllerRoutes)
+        foreach (var controllerPropagation in propagatedControllerRoutes)
         {
-            var propagatedPrefix = controllerPropagations?.Prefix;
+            var propagatedPrefix = controllerPropagation?.Prefix;
 
             // we still want to allow routes to generate if only the controller contains route information
-            IEnumerable<RoutingAttribute?> routeCandidates = action.RoutingAttributes.Where(x => x.CanGenerateRoute());
-            if (!routeCandidates.Any(x => x?.Route() != null))
+            IEnumerable<RoutingAttribute?> routeCandidates = action.RoutingAttributes.Where(x => x.CanGenerateRoute(_version));
+            if (!routeCandidates.Any(x => x?.Route(_version) != null))
                 routeCandidates = [null];
             foreach (var routeCandidate in routeCandidates)
             {
+                if (routeCandidate?.Route(_version) == null && controllerPropagation?.PropagationType == RoutePropagation.OnlyPropagatedToAlreadyRoutedActions)
+                {
+                    continue;
+                }
+
                 var route = CalculateRoute(action, routeCandidate, propagatedPrefix);
                 if (route != null)
                     routes.Add(route);
@@ -55,7 +62,7 @@ public static class RouteCalculator
         action.Routes = [.. action.Routes, .. CoalesceRoutes(routes)];
     }
 
-    public static void PopulateConventionalRoutes(ActionCandidate action, ConventionalRoute template)
+    public void PopulateConventionalRoutes(ActionCandidate action, ConventionalRoute template)
     {
         // calculating a conventional routes is simple, we fill in the values of the route template if we match, leave the rest as parameters 
         // https://learn.microsoft.com/en-us/aspnet/web-api/overview/web-api-routing-and-actions/routing-and-action-selection
@@ -64,8 +71,8 @@ public static class RouteCalculator
         if (routedController != action.Controller.ControllerName)
             return;
 
-        var routedAction = template.ActionPart != null ? action.ActionName : template.Defaults?.GetValueOrDefault("action");
-        if (routedAction != action.ActionName)
+        var routedAction = template.ActionPart != null ? action.ActionName(_version) : template.Defaults?.GetValueOrDefault("action");
+        if (routedAction != action.ActionName(_version))
             return;
 
         var path = template.InstantiateTemplateWith(routedController, routedAction, null);
@@ -120,10 +127,10 @@ public static class RouteCalculator
         return coalescedRoutes;
     }
 
-    static List<HTTPMethod> AllowedMethods(IEnumerable<RoutingAttribute> allAttributes, RoutingAttribute? routeSource)
+    List<HTTPMethod> AllowedMethods(IEnumerable<RoutingAttribute> allAttributes, RoutingAttribute? routeSource)
     {
-        var otherMethods = allAttributes.SelectMany(x => x.HttpMethodOverride() ?? []).OfType<HTTPMethod>();
-        var sourceMethod = routeSource?.HttpMethodOverride();
+        var otherMethods = allAttributes.SelectMany(x => x.HttpMethodOverride(_version) ?? []).OfType<HTTPMethod>();
+        var sourceMethod = routeSource?.HttpMethodOverride(_version);
 
         if (sourceMethod == null)
         {

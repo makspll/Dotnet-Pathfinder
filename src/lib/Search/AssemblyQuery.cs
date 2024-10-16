@@ -10,16 +10,24 @@ using Makspll.Pathfinder.RoutingConfig;
 
 namespace Makspll.Pathfinder.Search;
 
-public class AssemblyQuery(ModuleDefMD module, PathfinderConfig? config = null)
+public class AssemblyQuery(ModuleDefMD module, FrameworkVersion frameworkVersion, PathfinderConfig? config = null)
 {
     readonly ModuleDefMD LoadedModule = module;
     readonly PathfinderConfig? config = config;
+
+    public readonly FrameworkVersion DetectedFramework = frameworkVersion;
+    private readonly RouteCalculator routeCalculator = new(frameworkVersion);
+    private readonly ActionFinder actionFinder = new(frameworkVersion);
+    private readonly AttributePropagator attributePropagator = new(frameworkVersion);
+    private readonly PlaceholderInliner placeholderInliner = new(frameworkVersion);
+    private readonly CandidateConverter candidateConverter = new(frameworkVersion);
+
     readonly IEnumerable<ConventionalRoute> routes = config?.ConventionalRoutes
         .Select(x => ConventionalRoute.Parse(x.Template, x.Defaults).ValueOrDefault)
         .OfType<ConventionalRoute>() ?? [];
 
     public AssemblyQuery(string dll, PathfinderConfig? config = null) : this(ModuleDefMD.Load(dll, ModuleDef.CreateModuleContext()), config ?? FindAndParseNearestConfig(dll)) { }
-
+    public AssemblyQuery(ModuleDefMD module, PathfinderConfig? config) : this(module, module.DetectFrameworkVersion(), config) { }
 
     public static PathfinderConfig? ParseConfig(FileInfo configFile)
     {
@@ -72,31 +80,26 @@ public class AssemblyQuery(ModuleDefMD module, PathfinderConfig? config = null)
     //     return null;
     // }
 
-    IEnumerable<ControllerCandidate> FindControllers()
-    {
-        var types = LoadedModule.GetTypes();
-        var controllers = new List<Controller>();
-        foreach (var controllerCandidate in ControllerFinder.FindControllers(LoadedModule))
-        {
-
-            ActionFinder.PopulateActions(controllerCandidate);
-            AttributePropagator.PropagateAttributes(controllerCandidate);
-            controllerCandidate.Actions.ForEach(RouteCalculator.PopulateRoutes);
-            foreach (var conventionalRoute in routes)
-            {
-                controllerCandidate.Actions.ForEach(x => RouteCalculator.PopulateConventionalRoutes(x, conventionalRoute));
-            }
-
-            yield return controllerCandidate;
-        }
-    }
 
     public IEnumerable<Controller> FindAllControllers()
     {
-        var controllers = FindControllers();
-        var converted = CandidateConverter.ConvertCandidates(controllers);
-        PlaceholderInliner.InlinePlaceholders(converted);
 
-        return converted;
+        var types = LoadedModule.GetTypes();
+        var candidateControllers = ControllerFinder.FindControllers(LoadedModule).ToList();
+
+        foreach (var controllerCandidate in candidateControllers)
+        {
+
+            actionFinder.PopulateActions(controllerCandidate);
+            attributePropagator.PropagateAttributes(controllerCandidate);
+            controllerCandidate.Actions.ForEach(routeCalculator.PopulateRoutes);
+            foreach (var conventionalRoute in routes)
+            {
+                controllerCandidate.Actions.ForEach(x => routeCalculator.PopulateConventionalRoutes(x, conventionalRoute));
+            }
+        }
+
+        placeholderInliner.InlinePlaceholders(candidateControllers);
+        return candidateConverter.ConvertCandidates(candidateControllers);
     }
 }

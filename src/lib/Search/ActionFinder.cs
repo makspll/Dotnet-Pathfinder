@@ -4,21 +4,23 @@ using Makspll.Pathfinder.Routing;
 
 namespace Makspll.Pathfinder.Search;
 
-public static class ActionFinder
+public class ActionFinder(FrameworkVersion version)
 {
-    public static void PopulateActions(ControllerCandidate controller)
+    private readonly FrameworkVersion _version = version;
+
+    public void PopulateActions(ControllerCandidate controller)
     {
         var actions = FindActionCandidates(controller);
         controller.Actions.AddRange(actions);
     }
 
-    public static void PopulateConventionalActions(ControllerCandidate controller)
+    public void PopulateConventionalActions(ControllerCandidate controller)
     {
         var actions = FindActionCandidates(controller, true);
         controller.Actions.AddRange(actions);
     }
 
-    private static IEnumerable<ActionCandidate> FindActionCandidates(ControllerCandidate controller, bool excludeDisabledConventionalActions = true)
+    private IEnumerable<ActionCandidate> FindActionCandidates(ControllerCandidate controller, bool excludeDisabledConventionalActions = true)
     {
 
         foreach (var method in controller.Type.Methods)
@@ -27,7 +29,7 @@ public static class ActionFinder
                 continue;
 
             var routingAttributes = method.CustomAttributes.Select(AttributeParser.ParseAttribute).OfType<RoutingAttribute>();
-            if (excludeDisabledConventionalActions && routingAttributes.Any(x => x.DisablesConventionalRoutes()))
+            if (excludeDisabledConventionalActions && routingAttributes.Any(x => x.DisablesConventionalRoutes(_version)))
                 continue;
 
 
