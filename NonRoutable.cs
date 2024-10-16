@@ -8,6 +8,7 @@ namespace dotnet8
     {
         [HttpGet]
         [Route("hello")]
+        [ExpectNoRoute]
         public Task<OkObjectResult> HelloWorld()
         {
             return Task.FromResult(new OkObjectResult("ControllerWithoutApiControllerAttributeAndRoutes"));
@@ -17,6 +18,7 @@ namespace dotnet8
     public class ControllerWithHttpMethodAndRouteConfig
     {
         [HttpGet]
+        [ExpectNoRoute]
         public Task<OkObjectResult> HelloWorld()
         {
             return Task.FromResult(new OkObjectResult("ControllerWithHttpMethodAndRouteConfig"));

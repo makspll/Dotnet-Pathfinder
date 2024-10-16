@@ -20,10 +20,10 @@ public class ConventionalRoute
         return part.DefaultValue;
     }
 
-    public RouteTemplatePart? Controller => Template.FirstOrDefault(x => x.PartName == "controller");
-    public RouteTemplatePart? Action => Template.FirstOrDefault(x => x.PartName == "action");
-    public RouteTemplatePart? Area => Template.FirstOrDefault(x => x.PartName == "area");
-    public RouteTemplatePart? Id => Template.FirstOrDefault(x => x.PartName == "id");
+    public RouteTemplatePart? ControllerPart => Template.FirstOrDefault(x => x.PartName == "controller");
+    public RouteTemplatePart? ActionPart => Template.FirstOrDefault(x => x.PartName == "action");
+    public RouteTemplatePart? AreaPart => Template.FirstOrDefault(x => x.PartName == "area");
+    public RouteTemplatePart? IdPart => Template.FirstOrDefault(x => x.PartName == "id");
 
 
     public string InstantiateTemplateWith(string? controller, string? action, string? area, bool fillInWithDefaults = false)
@@ -48,8 +48,15 @@ public class ConventionalRoute
                     parts.Add(part.DefaultValue ?? "");
             }
         }
+        var output = string.Join('/', parts);
 
-        return '/' + string.Join('/', parts);
+        if (!output.StartsWith('/'))
+            output = '/' + output;
+
+        if (output.EndsWith('/'))
+            output = output[..^1];
+
+        return output;
     }
 
     /**
