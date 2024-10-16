@@ -10,14 +10,18 @@ using Makspll.Pathfinder.RoutingConfig;
 
 namespace Makspll.Pathfinder.Search;
 
-public class AssemblyQuery(ModuleDefMD module, IEnumerable<ConventionalRoute>? config = null)
+public class AssemblyQuery(ModuleDefMD module, PathfinderConfig? config = null)
 {
     readonly ModuleDefMD LoadedModule = module;
-    readonly IEnumerable<ConventionalRoute>? config = config;
-    public AssemblyQuery(string dll, IEnumerable<ConventionalRoute>? routes = null) : this(ModuleDefMD.Load(dll, ModuleDef.CreateModuleContext()), routes ?? FindAndParseNearestConfig(dll)) { }
+    readonly PathfinderConfig? config = config;
+    readonly IEnumerable<ConventionalRoute> routes = config?.ConventionalRoutes
+        .Select(x => ConventionalRoute.Parse(x.Template, x.Defaults).ValueOrDefault)
+        .OfType<ConventionalRoute>() ?? [];
+
+    public AssemblyQuery(string dll, PathfinderConfig? config = null) : this(ModuleDefMD.Load(dll, ModuleDef.CreateModuleContext()), config ?? FindAndParseNearestConfig(dll)) { }
 
 
-    public static IEnumerable<ConventionalRoute>? ParseConfig(FileInfo configFile)
+    public static PathfinderConfig? ParseConfig(FileInfo configFile)
     {
         if (!configFile.Exists)
             return null;
@@ -38,13 +42,13 @@ public class AssemblyQuery(ModuleDefMD module, IEnumerable<ConventionalRoute>? c
             throw new Exception($"Encountered errors when parsing templates: {string.Join('\n', failedResults)}");
         }
 
-        return results.Select(x => x.Value);
+        return config;
     }
 
     /// <summary>
     /// Finds and parses the nearest pathfinder.json file in the directory tree starting from the given directory. Returns null if no file is found.
     /// </summary>
-    public static IEnumerable<ConventionalRoute>? FindAndParseNearestConfig(string dll)
+    public static PathfinderConfig? FindAndParseNearestConfig(string dll)
     {
         var dllDirectory = Path.GetDirectoryName(dll);
         var configPath = FileSearch.FindNearestFile("pathfinder.json", dllDirectory ?? dll);
@@ -78,7 +82,7 @@ public class AssemblyQuery(ModuleDefMD module, IEnumerable<ConventionalRoute>? c
             ActionFinder.PopulateActions(controllerCandidate);
             AttributePropagator.PropagateAttributes(controllerCandidate);
             controllerCandidate.Actions.ForEach(RouteCalculator.PopulateRoutes);
-            foreach (var conventionalRoute in config ?? [])
+            foreach (var conventionalRoute in routes)
             {
                 controllerCandidate.Actions.ForEach(x => RouteCalculator.PopulateConventionalRoutes(x, conventionalRoute));
             }

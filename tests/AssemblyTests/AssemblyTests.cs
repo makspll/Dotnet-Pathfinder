@@ -67,7 +67,7 @@ namespace AssemblyTests
             ExpectPortFree(5000);
             var dllPath = BuildTestAssembly(testAssemblyDir, forwardOutput: forwardOutput);
             var configFile = Path.Combine(testAssemblyDir, "pathfinder.json");
-            var query = new AssemblyQuery(dllPath, AssemblyQuery.ParseConfig(new FileInfo(configFile)) ?? []);
+            var query = new AssemblyQuery(dllPath, AssemblyQuery.ParseConfig(new FileInfo(configFile)));
             process = RunTestAssembly(testAssemblyDir, forwardOutput: forwardOutput);
             var _ = WaitUntillEndpointAndCall<RouteInfo[]>("http://localhost:5000/api/attributeroutes") ?? throw new Exception("Failed to get route info");
             return query;
