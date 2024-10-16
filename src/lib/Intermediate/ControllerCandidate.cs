@@ -9,4 +9,6 @@ public class ControllerCandidate
     public required IEnumerable<RoutingAttribute> RoutingAttributes { get; set; }
 
     public List<ActionCandidate> Actions { get; set; } = [];
+
+    public string ControllerName => Type.Name.EndsWith("Controller") ? Type.Name.Substring(0, Type.Name.Length - "Controller".Length) : Type.Name;
 }

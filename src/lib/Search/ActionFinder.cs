@@ -6,14 +6,16 @@ namespace Makspll.Pathfinder.Search;
 
 public static class ActionFinder
 {
-    public static IEnumerable<ActionCandidate> FindActions(ControllerCandidate controller)
+    public static void PopulateActions(ControllerCandidate controller)
     {
-        return FindActionCandidates(controller);
+        var actions = FindActionCandidates(controller);
+        controller.Actions.AddRange(actions);
     }
 
-    public static IEnumerable<ActionCandidate> FindConventionalActions(ControllerCandidate controller)
+    public static void PopulateConventionalActions(ControllerCandidate controller)
     {
-        return FindActionCandidates(controller, true);
+        var actions = FindActionCandidates(controller, true);
+        controller.Actions.AddRange(actions);
     }
 
     private static IEnumerable<ActionCandidate> FindActionCandidates(ControllerCandidate controller, bool excludeDisabledConventionalActions = true)
@@ -32,7 +34,8 @@ public static class ActionFinder
             yield return new ActionCandidate()
             {
                 Method = method,
-                RoutingAttributes = routingAttributes
+                RoutingAttributes = routingAttributes,
+                Controller = controller
             };
         }
     }

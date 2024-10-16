@@ -4,7 +4,7 @@ namespace Makspll.Pathfinder.PostProcess;
 
 public class PlaceholderInliner
 {
-    public static void InlinePlaceholders(List<Controller> controllers)
+    public static void InlinePlaceholders(IEnumerable<Controller> controllers)
     {
         foreach (var controller in controllers)
         {
