@@ -227,11 +227,11 @@ namespace TestUtils
 #elif NET472
     public static class PathExporter
     {
-        private static List<HttpMethod> _ALL_METHODS =
-            new List<HttpMethod>()
+        private static List<string> _ALL_METHODS =
+            new()
             {
-                HttpMethod.Get, HttpMethod.Put, HttpMethod.Delete, HttpMethod.Head, HttpMethod.Options,
-                HttpMethod.Post, HttpMethod.Trace
+                HttpMethod.Get.Method, HttpMethod.Put.Method, HttpMethod.Delete.Method, HttpMethod.Head.Method, HttpMethod.Options.Method,
+                HttpMethod.Post.Method, HttpMethod.Trace.Method, "PATCH"
             };
 
         public static List<RouteInfo> ListAllRoutes(bool includeConventional = true, bool includeAttributeRoutes = true)
@@ -245,7 +245,9 @@ namespace TestUtils
             {
                 var isAttributeRouted =
                     routeMethod.ActionDescriptor.Properties.Any(x =>
-                        (string)x.Key == "MS_IsAttributeRouted" && (bool)x.Value);
+                        (string)x.Key == "MS_IsAttributeRouted" && (bool)x.Value) || 
+                    routeMethod.ActionDescriptor.ControllerDescriptor.Properties.Any(x => 
+                        (x.Key as string) == "MS_IsAttributeRouted" && (bool)x.Value);
                 var isConventional = !isAttributeRouted;
                 if (!includeAttributeRoutes && isAttributeRouted)
                     continue;
@@ -458,11 +460,11 @@ namespace TestUtils
             {
                 foreach (var method in _ALL_METHODS)
                 {
-                    MockHttpRequest httpRequest = new MockHttpRequest(method.ToString());
+                    var httpRequest = new MockHttpRequest(method);
                     var context = new MockHttpContext(httpRequest);
                     var controllerContext = new MockControllerContext(context);
                     if (selector(controllerContext))
-                        methods.Add(method.ToString());
+                        methods.Add(method);
                 }
             }
 

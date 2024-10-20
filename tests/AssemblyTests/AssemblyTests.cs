@@ -118,7 +118,7 @@ namespace AssemblyTests
 
                         foreach (var route in action.Routes)
                         {
-                            var matchingRouteActions = attributeRoutes.Where(r => r.Routes.First() == route.Path);
+                            var matchingRouteActions = attributeRoutes.Where(r => r.Routes.FirstOrDefault(x => x == route.Path) != null);
                             if (!matchingRouteActions.Any())
                             {
                                 AssertionScope.Current.FailWith($"{controller.Namespace}::{controller.ClassName} - {route.Path} was not expected to be routable");
@@ -130,7 +130,7 @@ namespace AssemblyTests
             }
 
             // count for good measure
-            var expectedNonConventionalRoutes = attributeRoutes!.Length;
+            var expectedNonConventionalRoutes = attributeRoutes.Sum(x => x.Routes.Count())!;
             var actualNonConventionalRoutes = controllersMeta.Sum(c => c.Actions.Where(x => !x.IsConventional).Sum(a => a.Routes.Count()));
             actualNonConventionalRoutes.Should().Be(expectedNonConventionalRoutes, "All non-conventional routes should be in the metadata");
 

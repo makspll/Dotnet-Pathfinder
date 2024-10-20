@@ -5,7 +5,7 @@ using System.Web.Http.Results;
 
 namespace dotnetframework472.Api
 {
-    
+
     [Route("apiattributecontrollerprefix2")]
     [Route("apiattributecontrollerprefix")]
     public class ApiAttributeController : ApiController
@@ -26,7 +26,7 @@ namespace dotnetframework472.Api
     }
 
     public class ApiAttributeControllerNoRoute : ApiController
-    {   
+    {
         [Route("apiattributecontrollernoroute/getWithHttpGetRoute")]
         [HttpGet] // ApiController attributes must have a route on each method if there is no route on the class (runtime error)
         public string Get() => "hello";
@@ -44,7 +44,7 @@ namespace dotnetframework472.Api
         public string Get() => "hello";
 
         [Route("apigetwithrouteprefix")]
-        public string GetWithRoute() => "hello";
+        public string WithRoutePrefix() => "hello";
     }
 
     public class ApiInheritingControllerNoRoute : ApiController
@@ -63,12 +63,12 @@ namespace dotnetframework472.Api
         [HttpGet]
         public string Get() => "hello";
 
-        [Route("getwithroute")]
+        [Route("apigetwithroute2")]
         public string GetWithRoute() => "hello";
 
     }
 
-    public abstract class CustomBase : ApiController {}
+    public abstract class CustomBase : ApiController { }
 
     public class ApiCustomBaseInheritingController : CustomBase
     {
@@ -98,20 +98,20 @@ namespace dotnetframework472.Api
     [Route("apicontrollerComplexHttpMethods2")]
     public class ApiControllerComplexHttpMethods : ApiController
     {
-        
+
         [Route("apiHttpMethodWithSameRouteAsAnotherButDifferentMethod")]
         public string HttpMethodWithSameRouteAsAnotherButNoMethod() => "hello";
-            
+
         [Route("apiHttpMethodWithSameRouteAsAnotherButDifferentMethod")]
         public string HttpMethodWithSameRouteAsAnotherButGetMethod() => "hello";
-        
+
         [Route("apiHttpMethodWithSameRouteAsAnotherButDifferentMethod")]
         [HttpPost]
         public string HttpMethodWithSameRouteAsAnotherButPostMethod() => "hello";
 
     }
 
-    [Route("apiacceptverbscontroller")]
+    [Route("apiacceptverbsscontroller")]
     public class ApiAcceptVerbsController : ApiController
     {
         [Route("apiacceptverbsroute")]
@@ -148,13 +148,12 @@ namespace dotnetframework472.Api
         public string Head() => "hello";
 
     }
-    
-    
+
+
     public class ApiDefaultConventionalApiController : ApiController
     {
         [HttpGet]
-        [Route("test/asd")]
-        public string  DefaultAction() => "hello";
+        public string DefaultAction() => "hello";
 
         [HttpGet]
         public string NonDefaultAction() => "hello";
@@ -181,7 +180,7 @@ namespace dotnetframework472.Api
     }
 
 
-    public class ApiControllerWithNoRoutes : ApiController {};
+    public class ApiControllerWithNoRoutes : ApiController { };
 
 
     [Route("api/[controller]")]
@@ -190,7 +189,7 @@ namespace dotnetframework472.Api
         [Route("[action]")]
         [ActionName("OverridenActionName")]
         public string Get() => "hello";
-        
+
         [Route("[action]")]
         public string Post() => "hello";
     }

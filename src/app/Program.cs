@@ -33,7 +33,7 @@ foreach (var dll in dlls)
     var config = configFileLocations.Select(x => AssemblyQuery.ParseConfig(new FileInfo(x))).FirstOrDefault(x => x != null);
     if (config == null)
     {
-        Console.WriteLine($"No config file found for {dll}".Color(ConsoleColor.Yellow));
+        Console.WriteLine($"No 'pathfinder.json' file specified or found when processing dll: '{dll}'. Ignoring".Color(ConsoleColor.Red));
         continue;
     }
 

@@ -8,7 +8,12 @@ public class RouteCalculator(FrameworkVersion version)
 
     private readonly FrameworkVersion _version = version;
 
-    private Route? CalculateRoute(ActionCandidate action, RoutingAttribute? routeCandidate, string? propagatedPrefix)
+    public List<HTTPMethod> DefaultMethods(ControllerKind controllerKind) =>
+        (_version == FrameworkVersion.DOTNET_FRAMEWORK && controllerKind == ControllerKind.API) ?
+            [HTTPMethod.POST] :
+            [.. Enum.GetValues<HTTPMethod>()];
+
+    private Route? CalculateRoute(ActionCandidate action, RoutingAttribute? routeCandidate, PropagatedRoute? propagatedPrefix)
     {
         string? suffix = null;
         if (routeCandidate != null)
@@ -16,14 +21,23 @@ public class RouteCalculator(FrameworkVersion version)
             suffix = routeCandidate.Route(_version) ?? action.PropagatedRoutes.FirstOrDefault(x => !x.FromController)?.Prefix;
         }
 
-        var path = Join(propagatedPrefix, suffix);
+        var prefix = propagatedPrefix?.Prefix;
+        // If the propagation needs a standalone route, we don't propagate the prefix without one
+        if (suffix == null && propagatedPrefix?.PropagationType == RoutePropagation.PropagateToRoutes)
+            prefix = null;
+        // if the attribute only propagates to unrouted actions, don't propagate in the case of an existing suffix
+        else if (suffix != null && propagatedPrefix?.PropagationType == RoutePropagation.PropagateToUnrouted)
+            prefix = null;
+
+
+        var path = Join(prefix, suffix);
 
         if (string.IsNullOrEmpty(path))
             return null;
 
         return new Route
         {
-            Methods = AllowedMethods(action.RoutingAttributes, routeCandidate),
+            Methods = AllowedMethods(action.RoutingAttributes, routeCandidate, action.ActionName(_version), action.Controller.Kind),
             Path = path
         };
     }
@@ -31,28 +45,23 @@ public class RouteCalculator(FrameworkVersion version)
     {
         var routes = new List<Route>();
 
-
         // if nothing gets propagated we still want to allow routes to generate
-        IEnumerable<PropagatedRoute?> propagatedControllerRoutes = action.PropagatedRoutes.Where(x => x.FromController);
+        IEnumerable<PropagatedRoute?> propagatedControllerRoutes = action.PropagatedRoutes.Where(x =>
+            x.FromController &&
+            x.PropagatesInControllerKinds.Contains(action.Controller.Kind)
+            );
         if (!propagatedControllerRoutes.Any())
             propagatedControllerRoutes = [null];
 
         foreach (var controllerPropagation in propagatedControllerRoutes)
         {
-            var propagatedPrefix = controllerPropagation?.Prefix;
-
             // we still want to allow routes to generate if only the controller contains route information
             IEnumerable<RoutingAttribute?> routeCandidates = action.RoutingAttributes.Where(x => x.CanGenerateRoute(_version));
             if (!routeCandidates.Any(x => x?.Route(_version) != null))
                 routeCandidates = [null];
             foreach (var routeCandidate in routeCandidates)
             {
-                if (routeCandidate?.Route(_version) == null && controllerPropagation?.PropagationType == RoutePropagation.OnlyPropagatedToAlreadyRoutedActions)
-                {
-                    continue;
-                }
-
-                var route = CalculateRoute(action, routeCandidate, propagatedPrefix);
+                var route = CalculateRoute(action, routeCandidate, controllerPropagation);
                 if (route != null)
                     routes.Add(route);
             }
@@ -75,9 +84,13 @@ public class RouteCalculator(FrameworkVersion version)
         if (routedAction != action.ActionName(_version))
             return;
 
+        var templateControllerKind = template.Type.ToControllerKind();
+        if (_version == FrameworkVersion.DOTNET_FRAMEWORK && templateControllerKind != null && templateControllerKind != action.Controller.Kind)
+            return;
+
         var path = template.InstantiateTemplateWith(routedController, routedAction, null);
 
-        var allowedMethods = AllowedMethods(action.RoutingAttributes, null);
+        var allowedMethods = AllowedMethods(action.RoutingAttributes, null, action.ActionName(_version), action.Controller.Kind);
 
         action.ConventionalRoutes.Add(
             new Route { Path = path, Methods = allowedMethods }
@@ -127,25 +140,35 @@ public class RouteCalculator(FrameworkVersion version)
         return coalescedRoutes;
     }
 
-    List<HTTPMethod> AllowedMethods(IEnumerable<RoutingAttribute> allAttributes, RoutingAttribute? routeSource)
+    List<HTTPMethod> AllowedMethods(IEnumerable<RoutingAttribute> allAttributes, RoutingAttribute? routeSource, string actionName, ControllerKind controllerKind)
     {
         var otherMethods = allAttributes.SelectMany(x => x.HttpMethodOverride(_version) ?? []).OfType<HTTPMethod>();
         var sourceMethod = routeSource?.HttpMethodOverride(_version);
 
-        if (sourceMethod == null)
-        {
-            if (otherMethods.Any())
-            {
-                return otherMethods.ToList();
-            }
-        }
-        else
+        if (sourceMethod != null)
         {
             // the more specific method override takes precedence
             return sourceMethod.ToList();
         }
 
-        return [.. Enum.GetValues<HTTPMethod>()];
+        if (otherMethods.Any())
+        {
+            return otherMethods.ToList();
+        }
+
+        if (_version == FrameworkVersion.DOTNET_FRAMEWORK && controllerKind == ControllerKind.API)
+        {
+            // .net framework also uses the name of the action to determine the allowed method
+            foreach (var httpMethod in Enum.GetValues<HTTPMethod>())
+            {
+                if (actionName.StartsWith(httpMethod.ToString(), StringComparison.OrdinalIgnoreCase))
+                {
+                    return [httpMethod];
+                }
+            }
+        }
+
+        return DefaultMethods(controllerKind);
     }
 }
 

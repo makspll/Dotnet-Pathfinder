@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Makspll.Pathfinder.Intermediate;
 
 namespace Makspll.Pathfinder.Routing;
 
@@ -13,7 +14,12 @@ public enum RoutePropagation
     /// <summary>
     /// If an action has no route, this will not propagate to it, will only propagate to actions with already existing routes.
     /// </summary>
-    OnlyPropagatedToAlreadyRoutedActions,
+    PropagateToRoutes,
+
+    /// <summary>
+    /// If an action has no route already, then propagate to it, but do not propagate to actions with existing routes, i.e. will not act like a prefix
+    /// </summary>
+    PropagateToUnrouted,
 
     /// <summary>
     /// The attribute does not propagate to actions or does not have a route
@@ -89,6 +95,12 @@ public abstract class RoutingAttribute(string name)
     public virtual RoutePropagation Propagation(FrameworkVersion version) => RoutePropagation.None;
 
     /// <summary>
+    /// Describes the controller contexts in which the attribute propagation applies. For example certain attributes may only propagate to actions for MVC controllers.
+    /// </summary>
+    public virtual ControllerKind[] PropagationContexts() => [ControllerKind.MVC, ControllerKind.API, ControllerKind.CORE];
+
+
+    /// <summary>
     /// If the attribute overrides the HTTP method, return it
     /// </summary>
     public virtual IEnumerable<HTTPMethod>? HttpMethodOverride(FrameworkVersion version) => null;
@@ -121,16 +133,19 @@ public class RouteAttribute(string? path) : RoutingAttribute("Route")
 
     public override string? Route(FrameworkVersion version) => Path;
 
+
+
+    // in .NET Framework, Route attributes do not act like prefixes, they are standalone routes at controller level only
+    public override RoutePropagation Propagation(FrameworkVersion version) => version == FrameworkVersion.DOTNET_FRAMEWORK ?
+        RoutePropagation.PropagateToUnrouted :
+        RoutePropagation.Propagate;
+
     public override bool CanGenerateRoute(FrameworkVersion version) => true;
-    public override RoutePropagation Propagation(FrameworkVersion version)
-    {
-        return version switch
-        {
-            // in .NET Framework, Route attributes do not act like prefixes, they are standalone routes
-            FrameworkVersion.DOTNET_FRAMEWORK => RoutePropagation.None,
-            _ => RoutePropagation.Propagate,
-        };
-    }
+
+    /// <summary>
+    ///  Route attributes are only propagated to actions in MVC controllers
+    /// </summary>
+    public override ControllerKind[] PropagationContexts() => [ControllerKind.CORE, ControllerKind.MVC, ControllerKind.API];
 }
 
 public class RoutePrefixAttribute(string? prefix) : RoutingAttribute("RoutePrefix")
@@ -141,7 +156,7 @@ public class RoutePrefixAttribute(string? prefix) : RoutingAttribute("RoutePrefi
 
     public override bool CanGenerateRoute(FrameworkVersion version) => false;
 
-    public override RoutePropagation Propagation(FrameworkVersion version) => RoutePropagation.OnlyPropagatedToAlreadyRoutedActions;
+    public override RoutePropagation Propagation(FrameworkVersion version) => RoutePropagation.PropagateToRoutes;
 }
 
 public class HttpAttribute(HTTPMethod method, string? route) : RoutingAttribute($"Http{char.ToUpper(method.ToString()[0])}{method.ToString()[1..].ToLower()}")

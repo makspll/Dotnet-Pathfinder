@@ -199,7 +199,7 @@ namespace AssemblyTests
         {
             if (expected.Contains('{') || expected.Contains('}'))
             {
-                var parsed = ConventionalRoute.Parse(expected, null).Value;
+                var parsed = ConventionalRoute.Parse(expected, null, null).Value;
                 var instantiated = parsed.InstantiateTemplateWith(expectedController, expectedAction, expectedArea, false);
                 return instantiated;
             }
@@ -219,7 +219,7 @@ namespace AssemblyTests
             {
                 if (received.Actions.Any() && !received.Actions.All(x => x.IsConventional || x.Routes.Count == 0))
                 {
-                    scope.FailWith($"Controller {received.ClassName} is not expected to contain any non conventional actions with routes");
+                    scope.FailWith($"Controller {received.Namespace}::{received.ClassName} is not expected to contain any non conventional actions with routes");
                     return;
                 }
                 else
@@ -252,7 +252,8 @@ namespace AssemblyTests
 
             if (receivedMethod.IsConventional)
             {
-                scope.FailWith($"{received.Namespace}::{received.ClassName} - {expected!.ActionMethodName} route is conventional");
+                var allRoutesString = string.Join(", ", receivedMethod.Routes.Select(r => r.Path));
+                scope.FailWith($"{received.Namespace}::{received.ClassName} [{allRoutesString}] - {expected!.ActionMethodName} action is conventional but expected route: {expected.Routes.First()} is attribute based");
                 return;
             }
 

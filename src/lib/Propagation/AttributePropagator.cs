@@ -31,7 +31,8 @@ public class AttributePropagator(FrameworkVersion version)
             {
                 Prefix = attribute.Route(_version)!,
                 PropagationType = attribute.Propagation(_version),
-                FromController = fromController
+                FromController = fromController,
+                PropagatesInControllerKinds = attribute.PropagationContexts()
             };
         }
         else

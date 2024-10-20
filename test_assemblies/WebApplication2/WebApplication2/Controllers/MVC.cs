@@ -3,7 +3,7 @@ using System.Web.Mvc;
 
 namespace dotnetframework472.Mvc
 {
-    
+
     [Route("attributecontrollerprefix2")]
     [Route("attributecontrollerprefix")]
     public class AttributeController : Controller
@@ -13,7 +13,7 @@ namespace dotnetframework472.Mvc
 
 
         [HttpGet]
-        [Route("getwithroute")]
+        [Route("attributegetwithroute")]
         public Task GetWithRoute() => Task.FromResult(new HttpStatusCodeResult(200));
 
         [HttpGet]
@@ -22,9 +22,14 @@ namespace dotnetframework472.Mvc
         public Task MultipleRoutes() => Task.FromResult(new HttpStatusCodeResult(200));
 
     }
-    
+
+    public class EmptyControllerBaseController : ControllerBase
+    {
+        protected override void ExecuteCore() { }
+    }
+
     public class AttributeControllerNoRoute : Controller
-    {   
+    {
         [Route("attributecontrollernoroute/getWithHttpGetRoute")]
         [HttpGet] // ApiController attributes must have a route on each method if there is no route on the class (runtime error)
         public Task Get() => Task.FromResult(new HttpStatusCodeResult(200));
@@ -36,31 +41,21 @@ namespace dotnetframework472.Mvc
 
     [Route("inheritingcontrollerprefix")]
     [Route("inheritingcontrollerprefix2")]
-    public class InheritingController : ControllerBase
+    public class InheritingController : Controller
     {
         [HttpGet]
         public Task Get() => Task.FromResult(new HttpStatusCodeResult(200));
 
         [Route("getwithroute")]
         public Task GetWithRoute() => Task.FromResult(new HttpStatusCodeResult(200));
-
-        protected override void ExecuteCore()
-        {
-            throw new System.NotImplementedException();
-        }
     }
 
-    public class InheritingControllerNoRoute : ControllerBase
+    public class InheritingControllerNoRoute : Controller
     {
         public Task Get() => Task.FromResult(new HttpStatusCodeResult(200));
 
         [Route("InheritingControllerNoRoute/getwithroute")]
         public Task GetWithRoute() => Task.FromResult(new HttpStatusCodeResult(200));
-
-        protected override void ExecuteCore()
-        {
-            throw new System.NotImplementedException();
-        }
     }
 
     [Route("inheritingcontroller2prefix")]
@@ -70,12 +65,12 @@ namespace dotnetframework472.Mvc
         [HttpGet]
         public Task Get() => Task.FromResult(new HttpStatusCodeResult(200));
 
-        [Route("getwithroute")]
+        [Route("getwithroute2")]
         public Task GetWithRoute() => Task.FromResult(new HttpStatusCodeResult(200));
 
     }
 
-    public abstract class CustomBase : Controller {}
+    public abstract class CustomBase : Controller { }
 
     public class CustomBaseInheritingController : CustomBase
     {
@@ -105,13 +100,13 @@ namespace dotnetframework472.Mvc
     [Route("controllerComplexHttpMethods2")]
     public class ControllerComplexHttpMethods : Controller
     {
-        
+
         [Route("HttpMethodWithSameRouteAsAnotherButDifferentMethod")]
         public Task HttpMethodWithSameRouteAsAnotherButNoMethod() => Task.FromResult(new HttpStatusCodeResult(200));
-            
+
         [Route("HttpMethodWithSameRouteAsAnotherButDifferentMethod")]
         public Task HttpMethodWithSameRouteAsAnotherButGetMethod() => Task.FromResult(new HttpStatusCodeResult(200));
-        
+
         [Route("HttpMethodWithSameRouteAsAnotherButDifferentMethod")]
         [HttpPost]
         public Task HttpMethodWithSameRouteAsAnotherButPostMethod() => Task.FromResult(new HttpStatusCodeResult(200));
@@ -186,7 +181,7 @@ namespace dotnetframework472.Mvc
     }
 
 
-    public class ControllerWithNoRoutes : Controller {};
+    public class ControllerWithNoRoutes : Controller { };
 
 
     [Route("[controller]")]
@@ -195,7 +190,7 @@ namespace dotnetframework472.Mvc
         [Route("[action]")]
         [ActionName("OverridenActionName")]
         public Task Get() => Task.FromResult(new HttpStatusCodeResult(200));
-        
+
         [Route("[action]")]
         public Task Post() => Task.FromResult(new HttpStatusCodeResult(200));
     }

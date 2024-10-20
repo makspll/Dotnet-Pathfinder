@@ -13,11 +13,23 @@ namespace WebApplication2
         {
             routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
             routes.MapMvcAttributeRoutes();
-            
+
             routes.MapRoute(
                 name: "Default",
-                url: "{controller}/{action}/{id}",
-                defaults: new { controller = "Home", action = "Index", id = UrlParameter.Optional }
+                url: "conventionalprefix/{controller}/{action}",
+                defaults: new { }
+            );
+
+            routes.MapRoute(
+                name: "Default2",
+                url: "conventionalprefix2/{controller}",
+                defaults: new { action = "DefaultAction" }
+            );
+
+            routes.MapRoute(
+                name: "Default3",
+                url: "conventionalwithnoactionspecs",
+                defaults: new { controller = "DefaultConventional", action = "DefaultAction" }
             );
         }
     }

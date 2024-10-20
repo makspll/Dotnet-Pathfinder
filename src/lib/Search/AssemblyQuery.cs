@@ -10,10 +10,10 @@ using Makspll.Pathfinder.RoutingConfig;
 
 namespace Makspll.Pathfinder.Search;
 
-public class AssemblyQuery(ModuleDefMD module, FrameworkVersion frameworkVersion, PathfinderConfig? config = null)
+public class AssemblyQuery(ModuleDefMD module, FrameworkVersion frameworkVersion, ParsedPathfinderConfig? config = null)
 {
     readonly ModuleDefMD LoadedModule = module;
-    readonly PathfinderConfig? config = config;
+    readonly ParsedPathfinderConfig config = config ?? new();
 
     public readonly FrameworkVersion DetectedFramework = frameworkVersion;
     private readonly RouteCalculator routeCalculator = new(frameworkVersion);
@@ -21,71 +21,43 @@ public class AssemblyQuery(ModuleDefMD module, FrameworkVersion frameworkVersion
     private readonly AttributePropagator attributePropagator = new(frameworkVersion);
     private readonly PlaceholderInliner placeholderInliner = new(frameworkVersion);
     private readonly CandidateConverter candidateConverter = new(frameworkVersion);
+    private readonly ControllerFinder controllerFinder = new(frameworkVersion);
 
-    readonly IEnumerable<ConventionalRoute> routes = config?.ConventionalRoutes
-        .Select(x => ConventionalRoute.Parse(x.Template, x.Defaults).ValueOrDefault)
-        .OfType<ConventionalRoute>() ?? [];
+    public AssemblyQuery(string dll, ParsedPathfinderConfig? config = null) : this(ModuleDefMD.Load(dll, ModuleDef.CreateModuleContext()), config ?? FindAndParseNearestConfig(dll)) { }
+    public AssemblyQuery(ModuleDefMD module, ParsedPathfinderConfig? config) : this(module, module.DetectFrameworkVersion(), config) { }
 
-    public AssemblyQuery(string dll, PathfinderConfig? config = null) : this(ModuleDefMD.Load(dll, ModuleDef.CreateModuleContext()), config ?? FindAndParseNearestConfig(dll)) { }
-    public AssemblyQuery(ModuleDefMD module, PathfinderConfig? config) : this(module, module.DetectFrameworkVersion(), config) { }
-
-    public static PathfinderConfig? ParseConfig(FileInfo configFile)
+    public static ParsedPathfinderConfig ParseConfig(FileInfo configFile)
     {
         if (!configFile.Exists)
-            return null;
+            return new();
 
         var config = JsonSerializer.Deserialize<PathfinderConfig>(File.ReadAllText(configFile.FullName));
 
         if (config == null)
-            return null;
+            return new();
 
-        var results = config.ConventionalRoutes.Select(x => ConventionalRoute.Parse(x.Template, x.Defaults)).ToList();
-        if (results == null)
-            return null;
-
-        var failedResults = results.Where(x => x.IsFailed).Select(x => x.Errors).ToList();
-
-        if (failedResults.Count > 0)
-        {
-            throw new Exception($"Encountered errors when parsing templates: {string.Join('\n', failedResults)}");
-        }
-
-        return config;
+        return new ParsedPathfinderConfig(config);
     }
 
     /// <summary>
     /// Finds and parses the nearest pathfinder.json file in the directory tree starting from the given directory. Returns null if no file is found.
     /// </summary>
-    public static PathfinderConfig? FindAndParseNearestConfig(string dll)
+    public static ParsedPathfinderConfig FindAndParseNearestConfig(string dll)
     {
         var dllDirectory = Path.GetDirectoryName(dll);
         var configPath = FileSearch.FindNearestFile("pathfinder.json", dllDirectory ?? dll);
         if (configPath == null)
-            return null;
+            return new();
 
         return ParseConfig(configPath);
     }
-
-    // static HTTPMethod? ActionNameToVerb(string name)
-    // {
-    //     foreach (var verb in Enum.GetNames<HTTPMethod>())
-    //     {
-    //         // title case the verb 
-    //         var titleCaseVerb = verb.ToString()[0].ToString().ToUpper() + verb.ToString()[1..].ToLower();
-    //         if (name.StartsWith(titleCaseVerb))
-    //         {
-    //             return Enum.Parse<HTTPMethod>(verb);
-    //         }
-    //     }
-    //     return null;
-    // }
 
 
     public IEnumerable<Controller> FindAllControllers()
     {
 
         var types = LoadedModule.GetTypes();
-        var candidateControllers = ControllerFinder.FindControllers(LoadedModule).ToList();
+        var candidateControllers = controllerFinder.FindControllers(LoadedModule).ToList();
 
         foreach (var controllerCandidate in candidateControllers)
         {
@@ -93,7 +65,7 @@ public class AssemblyQuery(ModuleDefMD module, FrameworkVersion frameworkVersion
             actionFinder.PopulateActions(controllerCandidate);
             attributePropagator.PropagateAttributes(controllerCandidate);
             controllerCandidate.Actions.ForEach(routeCalculator.PopulateRoutes);
-            foreach (var conventionalRoute in routes)
+            foreach (var conventionalRoute in config.ConventionalRoutes)
             {
                 controllerCandidate.Actions.ForEach(x => routeCalculator.PopulateConventionalRoutes(x, conventionalRoute));
             }

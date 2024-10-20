@@ -1,0 +1,42 @@
+{
+    "ConventionalRoutes": [
+        {
+            "Template": "conventionalprefix/{controller}/{action}",
+            "Type": "MVC"
+        },
+        {
+            "Template": "conventionalprefix2/{controller}",
+            "Defaults": {
+                "action": "DefaultAction"
+            },
+            "Type": "MVC"
+        },
+        {
+            "Template": "conventionalwithnoactionspecs",
+            "Defaults": {
+                "controller": "DefaultConventional",
+                "action": "DefaultAction"
+            },
+            "Type": "MVC"
+        },
+        {
+            "Template": "apiconventionalprefix/{controller}/{action}",
+            "Type": "API"
+        },
+        {
+            "Template": "apiconventionalprefix2/{controller}",
+            "Defaults": {
+                "action": "DefaultAction"
+            },
+            "Type": "API"
+        },
+        {
+            "Template": "apiconventionalwithnoactionspecs",
+            "Defaults": {
+                "controller": "ApiDefaultConventionalApi",
+                "action": "DefaultAction"
+            },
+            "Type": "API"
+        }
+    ]
+}

@@ -20,4 +20,5 @@ public record PropagatedRoute
     public required string Prefix { get; set; }
     public required RoutePropagation PropagationType { get; set; }
     public required bool FromController { get; set; }
+    public required ControllerKind[] PropagatesInControllerKinds { get; set; }
 }

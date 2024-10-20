@@ -10,8 +10,20 @@ namespace WebApplication2
             config.MapHttpAttributeRoutes();
             config.Routes.MapHttpRoute(
                 name: "DefaultApi",
-                routeTemplate: "api/{controller}/{id}",
-                defaults: new { id = RouteParameter.Optional }
+                routeTemplate: "apiconventionalprefix/{controller}/{action}",
+                defaults: new { }
+            );
+
+            config.Routes.MapHttpRoute(
+                name: "DefaultApi2",
+                routeTemplate: "apiconventionalprefix2/{controller}",
+                defaults: new { action = "DefaultAction" }
+            );
+
+            config.Routes.MapHttpRoute(
+                name: "DefaultApi3",
+                routeTemplate: "apiconventionalwithnoactionspecs",
+                defaults: new { controller = "ApiDefaultConventionalApi", action = "DefaultAction" }
             );
         }
     }

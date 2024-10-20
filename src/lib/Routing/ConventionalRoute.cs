@@ -1,13 +1,18 @@
+using System.Text.Json.Serialization;
 using FluentResults;
+using Makspll.Pathfinder.Intermediate;
 
 namespace Makspll.Pathfinder.Routing;
 public class ConventionalRoute
 {
+
+    public required ConventionalRouteType? Type { get; set; }
     /**
      * The template for the conventional route i.e. 
      * `{area}/api/{controller}/{action}/{id?}/{custom:string}`
      */
-    public required IEnumerable<RouteTemplatePart> Template { get; set; }
+    public required IEnumerable<RouteTemplatePart> Template
+    { get; set; }
 
     public required Dictionary<string, string>? Defaults { get; set; }
 
@@ -62,7 +67,7 @@ public class ConventionalRoute
     /**
     * Tries to parse a valid route template and returns a ConventionalRoute object or parse failure.
     */
-    public static Result<ConventionalRoute> Parse(string route, Dictionary<string, string>? defaults)
+    public static Result<ConventionalRoute> Parse(string route, Dictionary<string, string>? defaults, ConventionalRouteType? type)
     {
 
         var routeParts = route.Split('/');
@@ -81,6 +86,7 @@ public class ConventionalRoute
 
         return new ConventionalRoute
         {
+            Type = type,
             Template = templateParts,
             Defaults = defaults
         };
@@ -171,5 +177,28 @@ public class ConventionalRoute
                 return $"{{{PartName}{constraints}{defaultValue}{optional}}}";
             }
         }
+    }
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum ConventionalRouteType
+{
+    MVC,
+    API
+}
+
+public static class ConventionalRouteExtensions
+{
+    /// <summary>
+    /// Converts a ConventionalRouteType to a ControllerKind
+    /// </summary>
+    public static ControllerKind? ToControllerKind(this ConventionalRouteType? type)
+    {
+        return type switch
+        {
+            ConventionalRouteType.MVC => ControllerKind.MVC,
+            ConventionalRouteType.API => ControllerKind.API,
+            _ => null
+        };
     }
 }
