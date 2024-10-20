@@ -46,10 +46,7 @@ public class RouteCalculator(FrameworkVersion version)
         var routes = new List<Route>();
 
         // if nothing gets propagated we still want to allow routes to generate
-        IEnumerable<PropagatedRoute?> propagatedControllerRoutes = action.PropagatedRoutes.Where(x =>
-            x.FromController &&
-            x.PropagatesInControllerKinds.Contains(action.Controller.Kind)
-            );
+        IEnumerable<PropagatedRoute?> propagatedControllerRoutes = action.PropagatedRoutes.Where(x => x.FromController);
         if (!propagatedControllerRoutes.Any())
             propagatedControllerRoutes = [null];
 

@@ -95,12 +95,6 @@ public abstract class RoutingAttribute(string name)
     public virtual RoutePropagation Propagation(FrameworkVersion version) => RoutePropagation.None;
 
     /// <summary>
-    /// Describes the controller contexts in which the attribute propagation applies. For example certain attributes may only propagate to actions for MVC controllers.
-    /// </summary>
-    public virtual ControllerKind[] PropagationContexts() => [ControllerKind.MVC, ControllerKind.API, ControllerKind.CORE];
-
-
-    /// <summary>
     /// If the attribute overrides the HTTP method, return it
     /// </summary>
     public virtual IEnumerable<HTTPMethod>? HttpMethodOverride(FrameworkVersion version) => null;
@@ -141,11 +135,6 @@ public class RouteAttribute(string? path) : RoutingAttribute("Route")
         RoutePropagation.Propagate;
 
     public override bool CanGenerateRoute(FrameworkVersion version) => true;
-
-    /// <summary>
-    ///  Route attributes are only propagated to actions in MVC controllers
-    /// </summary>
-    public override ControllerKind[] PropagationContexts() => [ControllerKind.CORE, ControllerKind.MVC, ControllerKind.API];
 }
 
 public class RoutePrefixAttribute(string? prefix) : RoutingAttribute("RoutePrefix")
