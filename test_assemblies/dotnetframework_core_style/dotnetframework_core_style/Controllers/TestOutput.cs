@@ -3,12 +3,12 @@ using System.Web.Http;
 using TestUtils;
 
 
-namespace WebApplication2.Controllers
+namespace dotnetframework_core_style.Controllers
 {
     [RoutePrefix("api")]
     public class ListAllRoutesController : ApiController
     {
-        
+
         [HttpGet]
         [Route("attributeroutes")]
         public List<RouteInfo> Get() => PathExporter.ListAllRoutes(false, true);

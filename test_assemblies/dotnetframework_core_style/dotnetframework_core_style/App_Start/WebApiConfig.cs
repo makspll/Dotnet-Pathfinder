@@ -1,6 +1,6 @@
 using System.Web.Http;
 
-namespace WebApplication2
+namespace dotnetframework_core_style
 {
 
     public static class WebApiConfig
