@@ -218,4 +218,27 @@ namespace dotnetframework472.Mvc
         [Route("g")]
         public string Head() => "head";
     }
+
+    [RoutePrefix("controllerwithrouteandprefixcontrollerprefix")]
+    [Route("controllerwithrouteandprefixcontrollerroute")]
+    public class ControllerWithRouteAndPrefixController : Controller
+    {
+        [Route("withroute")]
+        public string Get() => "hello";
+
+        [HttpPost]
+        public string P() => "hello";
+    }
+
+    [RoutePrefix("controllerwithprefixandemptystrings")]
+    public class ControllerWithPrefixAndEmptyStringsController : Controller
+    {
+        [Route("")]
+        public string Pos() => "post";
+
+        [Route("")]
+        [HttpDelete]
+        public string Del() => "del";
+    }
+
 }

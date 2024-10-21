@@ -219,4 +219,15 @@ namespace dotnetframework472.Api
         public string P() => "hello";
     }
 
+
+    [RoutePrefix("apicontrollerwithprefixandemptystrings")]
+    public class ApiControllerWithPrefixAndEmptyStringsController : ApiController
+    {
+        [Route("")]
+        public string Pos() => "post";
+
+        [Route("")]
+        [HttpDelete]
+        public string Del() => "del";
+    }
 }
