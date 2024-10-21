@@ -77,7 +77,6 @@ namespace dotnet8
             return Task.FromResult(new OkObjectResult("With APIController attribute GET with route"));
         }
     }
-
     [Route("inheritingcontroller2prefix")]
     [Route("inheritingcontroller2prefix2")]
     public class InheritingController2 : Controller

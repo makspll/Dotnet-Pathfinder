@@ -1,9 +1,8 @@
-﻿using System.Text.Json;
-using ANSIConsole;
+﻿using ANSIConsole;
 using Makspll.Pathfinder.Routing;
 using Makspll.Pathfinder.Search;
-using Makspll.Pathfinder.Serialization;
 using Makspll.PathfinderApp;
+using Newtonsoft.Json;
 
 Args? parsedArgs = null;
 try
@@ -18,11 +17,7 @@ catch (Exception e)
 }
 
 var dlls = FileSearch.FindAllFiles(parsedArgs.DLLGlobs, parsedArgs.Directory).ToList();
-var serializationOptions = new JsonSerializerOptions
-{
-    WriteIndented = true,
-    Converters = { new RoutingAttributeConverter() }
-};
+
 var output = new List<Assembly>();
 
 foreach (var dll in dlls)
@@ -35,10 +30,10 @@ foreach (var dll in dlls)
         Path.Combine(Path.GetDirectoryName(dll) ?? dll,"..", "..","..","pathfinder.json")
     };
 
-    var config = configFileLocations.Select(x => AssemblyQuery.ParseConfig(new FileInfo(x))).FirstOrDefault(x => x != null) ?? [];
+    var config = configFileLocations.Select(x => AssemblyQuery.ParseConfig(new FileInfo(x))).FirstOrDefault(x => x != null);
     if (config == null)
     {
-        Console.WriteLine($"No config file found for {dll}".Color(ConsoleColor.Yellow));
+        Console.WriteLine($"No 'pathfinder.json' file specified or found when processing dll: '{dll}'. Ignoring".Color(ConsoleColor.Red));
         continue;
     }
 
@@ -50,7 +45,8 @@ foreach (var dll in dlls)
     {
         Name = dll.Split('/').Last(),
         Path = dll,
-        Controllers = controllers
+        Controllers = controllers,
+        FrameworkVersion = query.DetectedFramework
     };
     output.Add(assembly);
 }
@@ -65,7 +61,7 @@ if (parsedArgs.OutputFormat == OutputFormat.Text)
             Console.WriteLine("---------------".Color(ConsoleColor.DarkYellow));
         }
 
-        Console.WriteLine($"Assembly: {assembly.Name.Color(ConsoleColor.DarkGreen)}, Path: {assembly.Path.Color(ConsoleColor.DarkGreen).Underlined()}");
+        Console.WriteLine($"Assembly: {assembly.Name.Color(ConsoleColor.DarkGreen)}, Path: {assembly.Path.Color(ConsoleColor.DarkGreen).Underlined()} Type: {assembly.FrameworkVersion.ToString().Color(ConsoleColor.DarkGreen)}");
         foreach (var controller in assembly.Controllers)
         {
             Console.WriteLine($"Controller: {controller.ClassName.Color(ConsoleColor.DarkGreen)}");
@@ -93,6 +89,9 @@ if (parsedArgs.OutputFormat == OutputFormat.Text)
 }
 else
 {
-    Console.Write(JsonSerializer.Serialize(output, serializationOptions));
+
+    // write to stdout
+    using var writer = new StreamWriter(Console.OpenStandardOutput());
+    writer.Write(JsonConvert.SerializeObject(output, Formatting.Indented));
 }
 
