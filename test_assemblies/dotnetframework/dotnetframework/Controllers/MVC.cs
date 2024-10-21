@@ -193,4 +193,29 @@ namespace dotnetframework472.Mvc
         [HttpPost]
         public Task Post() => Task.FromResult(new HttpStatusCodeResult(200));
     }
+
+    [RoutePrefix("controllerwithverbnamedactions")]
+    public class ControllerWithVerbNamedActionsController : Controller
+    {
+        [Route("a")]
+        public string Get() => "get";
+
+        [Route("b")]
+        public string Post() => "post";
+
+        [Route("c")]
+        public string Put() => "put";
+
+        [Route("d")]
+        public string Delete() => "delete";
+
+        [Route("e")]
+        public string Patch() => "patch";
+
+        [Route("f")]
+        public string Options() => "options";
+
+        [Route("g")]
+        public string Head() => "head";
+    }
 }

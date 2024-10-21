@@ -189,4 +189,34 @@ namespace dotnetframework472.Api
         [Route("[action]")]
         public string Post() => "post";
     }
+
+    [Route("apicontrollerwithverbnamedactions")]
+    public class ApiControllerWithVerbNamedActionsController : ApiController
+    {
+        public string Get() => "get";
+
+        public string Post() => "post";
+
+        public string Put() => "put";
+
+        public string Delete() => "delete";
+
+        public string Patch() => "patch";
+
+        public string Options() => "options";
+
+        public string Head() => "head";
+    }
+
+    [RoutePrefix("apicontrollerwithrouteandprefixcontrollerprefix")]
+    [Route("apicontrollerwithrouteandprefixcontrollerroute")]
+    public class ApiControllerWithRouteAndPrefixController : ApiController
+    {
+        [Route("apiwithroute")]
+        public string Get() => "hello";
+
+        [HttpPost]
+        public string P() => "hello";
+    }
+
 }

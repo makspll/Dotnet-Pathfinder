@@ -13,22 +13,27 @@ public class RouteCalculator(FrameworkVersion version)
             [HTTPMethod.POST] :
             [.. Enum.GetValues<HTTPMethod>()];
 
-    private Route? CalculateRoute(ActionCandidate action, RoutingAttribute? routeCandidate, PropagatedRoute? propagatedPrefix)
+    private Route? CalculateRoute(ActionCandidate action, RoutingAttribute? routeCandidate, PropagatedRoute? propagatedRoute, IEnumerable<PropagatedRoute> propagatedPrefixes)
     {
         string? suffix = null;
         if (routeCandidate != null)
         {
-            suffix = routeCandidate.Route(_version) ?? action.PropagatedRoutes.FirstOrDefault(x => !x.FromController)?.Prefix;
+            suffix = routeCandidate.Route(_version) ?? action.PropagatedRoutes.FirstOrDefault(x => !x.FromController)?.Route;
+            if (suffix != null && propagatedRoute?.Prefix != null)
+                suffix = Join(propagatedRoute?.Prefix, suffix);
         }
+        if (suffix == null && propagatedRoute != null)
+            suffix = propagatedRoute.Route;
+        if (suffix == null)
+            return null;
 
-        var prefix = propagatedPrefix?.Prefix;
-        // If the propagation needs a standalone route, we don't propagate the prefix without one
-        if (suffix == null && propagatedPrefix?.PropagationType == RoutePropagation.PropagateToRoutes)
-            prefix = null;
-        // if the attribute only propagates to unrouted actions, don't propagate in the case of an existing suffix
-        else if (suffix != null && propagatedPrefix?.PropagationType == RoutePropagation.PropagateToUnrouted)
-            prefix = null;
-
+        var prefix = propagatedPrefixes.FirstOrDefault(x => x.Prefix != null)?.Prefix;
+        // // If the propagation needs a standalone route, we don't propagate the prefix without one
+        // if (suffix == null && propagatedPrefix?.PropagationType == RoutePropagation.PropagateToRoutes)
+        //     prefix = null;
+        // // if the attribute only propagates to unrouted actions, don't propagate in the case of an existing suffix
+        // else if (suffix != null && propagatedPrefix?.PropagationType == RoutePropagation.PropagateToUnrouted)
+        //     prefix = null;
 
         var path = Join(prefix, suffix);
 
@@ -50,7 +55,12 @@ public class RouteCalculator(FrameworkVersion version)
         if (!propagatedControllerRoutes.Any())
             propagatedControllerRoutes = [null];
 
-        foreach (var controllerPropagation in propagatedControllerRoutes)
+        var propagatedPrefixes = propagatedControllerRoutes.Where(x => x?.Prefix != null && x?.Route == null).OfType<PropagatedRoute>().ToList();
+        var propagatedRoutes = propagatedControllerRoutes.Where(x => x?.Route != null).ToList();
+        if (propagatedRoutes.Count == 0)
+            propagatedRoutes = [null];
+
+        foreach (var controllerPropagation in propagatedRoutes)
         {
             // we still want to allow routes to generate if only the controller contains route information
             IEnumerable<RoutingAttribute?> routeCandidates = action.RoutingAttributes.Where(x => x.CanGenerateRoute(_version));
@@ -58,7 +68,7 @@ public class RouteCalculator(FrameworkVersion version)
                 routeCandidates = [null];
             foreach (var routeCandidate in routeCandidates)
             {
-                var route = CalculateRoute(action, routeCandidate, controllerPropagation);
+                var route = CalculateRoute(action, routeCandidate, controllerPropagation, propagatedPrefixes);
                 if (route != null)
                     routes.Add(route);
             }

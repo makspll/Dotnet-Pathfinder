@@ -17,7 +17,8 @@ public class ActionCandidate
 
 public record PropagatedRoute
 {
-    public required string Prefix { get; set; }
+    public required string? Prefix { get; set; }
+    public required string? Route { get; set; }
     public required RoutePropagation PropagationType { get; set; }
     public required bool FromController { get; set; }
 }

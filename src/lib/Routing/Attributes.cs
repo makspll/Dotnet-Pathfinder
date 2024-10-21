@@ -85,6 +85,12 @@ public abstract class RoutingAttribute(string name)
     public abstract string? Route(FrameworkVersion version);
 
     /// <summary>
+    /// If the attribute has a route prefix attached to it, returns it
+    /// </summary>
+    public virtual string? RoutePrefix(FrameworkVersion version) => null;
+
+
+    /// <summary>
     /// If an attribute can generate a route if it either has a route or gets one propagated to it. If false will never generate a route
     /// </summary>
     public virtual bool CanGenerateRoute(FrameworkVersion version) => Route(version) != null;
@@ -127,7 +133,7 @@ public class RouteAttribute(string? path) : RoutingAttribute("Route")
 
     public override string? Route(FrameworkVersion version) => Path;
 
-
+    public override string? RoutePrefix(FrameworkVersion version) => version != FrameworkVersion.DOTNET_FRAMEWORK ? Path : null;
 
     // in .NET Framework, Route attributes do not act like prefixes, they are standalone routes at controller level only
     public override RoutePropagation Propagation(FrameworkVersion version) => version == FrameworkVersion.DOTNET_FRAMEWORK ?
@@ -141,7 +147,8 @@ public class RoutePrefixAttribute(string? prefix) : RoutingAttribute("RoutePrefi
 {
     public string? Prefix { get; init; } = prefix;
 
-    public override string? Route(FrameworkVersion version) => Prefix;
+    public override string? Route(FrameworkVersion version) => null;
+    public override string? RoutePrefix(FrameworkVersion version) => Prefix;
 
     public override bool CanGenerateRoute(FrameworkVersion version) => false;
 
