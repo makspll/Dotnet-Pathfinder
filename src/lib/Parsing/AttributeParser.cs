@@ -42,6 +42,8 @@ public static class AttributeParser
         {
             case "RouteAttribute":
                 return new RouteAttribute(GetAttributeNamedArgOrConstructorArg<string>(attribute, "Template", 0));
+            case "RoutePrefixAttribute":
+                return new RoutePrefixAttribute(GetAttributeNamedArgOrConstructorArg<string>(attribute, "Prefix", 0));
             case "ApiControllerAttribute":
                 return new ApiControllerAttribute();
             case "NonActionAttribute":

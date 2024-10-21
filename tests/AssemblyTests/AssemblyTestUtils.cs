@@ -47,51 +47,98 @@ namespace AssemblyTests
             }
         }
 
-        /**
-         * Build a test assembly and put the dll in the specified directory, return the path to the dll
-         */
-        public static string BuildTestAssembly(string testAssemblyDir)
+
+        public static Process StartMakefileProcess(string testAssemblyDir, string? target = null, Dictionary<string, string>? args = null, bool forwardOutput = false)
         {
-            var testAssemblyName = Path.GetFileName(testAssemblyDir);
-            var testAssemblyCsproj = Directory.EnumerateFiles(testAssemblyDir, "*.csproj").First();
+            var makefilePath = Path.Combine(testAssemblyDir, "makefile");
+
+            if (!File.Exists(makefilePath))
+            {
+                throw new Exception($"Could not find makefile in {testAssemblyDir}");
+            }
+            if (!Directory.Exists(testAssemblyDir))
+            {
+                throw new DirectoryNotFoundException($"The directory {testAssemblyDir} does not exist.");
+            }
+            string stringArgs = "";
+            if (args != null)
+            {
+                foreach (var arg in args)
+                {
+                    stringArgs += $" {arg.Key}={arg.Value}";
+                }
+            }
+
+            if (target != null)
+            {
+                stringArgs += $" {target}";
+            }
+
             var process = new Process
             {
                 StartInfo = new ProcessStartInfo
                 {
-                    FileName = "dotnet",
-                    Arguments = $"build {testAssemblyCsproj}",
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
+                    FileName = "make",
+                    Arguments = $"-f {testAssemblyDir}/makefile " + stringArgs,
+                    RedirectStandardOutput = !forwardOutput,
+                    RedirectStandardError = !forwardOutput,
                     UseShellExecute = false,
-                    CreateNoWindow = true
+                    CreateNoWindow = true,
+                    WorkingDirectory = testAssemblyDir,
                 }
             };
+
             process.Start();
+
+            if (!forwardOutput)
+            {
+                Task.Run(() => ReadStreamAsync(process.StandardOutput));
+                Task.Run(() => ReadStreamAsync(process.StandardError));
+            }
+
+
+            return process;
+        }
+
+        private static async Task ReadStreamAsync(StreamReader streamReader)
+        {
+            char[] buffer = new char[4096];
+            while (await streamReader.ReadAsync(buffer, 0, buffer.Length) > 0)
+            {
+                // Optionally process the output here
+            }
+        }
+
+        public static void RunMakefileInAssembly(string testAssemblyDir, string? target = null, bool forwardOutput = false)
+        {
+            var process = StartMakefileProcess(testAssemblyDir + "/", target, forwardOutput: forwardOutput);
+
             process.WaitForExit();
 
             if (process.ExitCode != 0)
             {
-                // get the error message
-                var errorMessage = process.StandardError.ReadToEnd();
-                var outputMessage = process.StandardOutput.ReadToEnd();
-                throw new Exception($"Failed to build test assembly {testAssemblyDir}: {outputMessage}{errorMessage}");
+                throw new Exception($"Failed to run makefile in {testAssemblyDir} with exit code {process.ExitCode}, Run with forwardOutput = true to see error message");
             }
+        }
+
+        /**
+         * Build a test assembly and put the dll in the specified directory, return the path to the dll
+         */
+        public static string BuildTestAssembly(string testAssemblyDir, bool forwardOutput = false)
+        {
+            RunMakefileInAssembly(testAssemblyDir, "build", forwardOutput: forwardOutput);
+
+            var testAssemblyName = Path.GetFileName(testAssemblyDir);
 
             // find the dll file
             var allDlls = Directory.EnumerateFiles(testAssemblyDir, "*.dll", SearchOption.AllDirectories).ToList();
-            var dllPath = allDlls.Find(f => Path.GetFileName(f) == $"{testAssemblyName}.dll" && !f.Contains("obj"));
-
-            if (dllPath == null)
-            {
-                throw new Exception($"Could not find the dll file for test assembly {testAssemblyName} in {testAssemblyDir} among: {string.Join(", ", allDlls)}");
-            }
-
+            var dllPath = allDlls.Find(f => Path.GetFileName(f) == $"{testAssemblyName}.dll" && !f.Contains("obj")) ?? throw new Exception($"Could not find the dll file for test assembly {testAssemblyName} in {testAssemblyDir} among: {string.Join(", ", allDlls)}");
             return dllPath;
         }
 
         public static T? WaitUntillEndpointAndCall<T>(string url)
         {
-            var timeout = DateTime.Now.AddSeconds(15);
+            var timeout = DateTime.Now.AddSeconds(5);
             while (true)
             {
                 if (DateTime.Now > timeout)
@@ -128,38 +175,19 @@ namespace AssemblyTests
             }
         }
 
-        public static Process RunAssembly(string dllPath, int port = 5000, bool forwardOutput = false)
+        public static Process RunTestAssembly(string testAssemblyDir, int port = 5000, bool forwardOutput = false)
         {
 
-            var process = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = "dotnet",
-                    Arguments = $"{dllPath} --urls http://localhost:{port}",
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                }
-            };
-            process.Start();
-
-            // Forward stdout and stderr continuously while waiting
-            if (forwardOutput)
-            {
-                process.OutputDataReceived += (sender, e) => Console.WriteLine(e.Data);
-                process.ErrorDataReceived += (sender, e) => Console.WriteLine(e.Data);
-                process.BeginOutputReadLine();
-                process.BeginErrorReadLine();
-            }
+            var process = StartMakefileProcess(testAssemblyDir!, "start", new Dictionary<string, string> {
+                { "PORT", port.ToString() },
+            }, forwardOutput: forwardOutput);
 
             return process;
         }
 
-        public static void RunAssemblyAndGetHTTPOutput<T>(string dllPath, string url, out T? httpOutput)
+        public static void RunAssemblyAndGetHTTPOutput<T>(string testAssemblyPath, string url, out T? httpOutput)
         {
-            var process = RunAssembly(dllPath);
+            var process = RunTestAssembly(testAssemblyPath);
             // wait for the process to start and call the `api/allroutes` endpoint
             httpOutput = WaitUntillEndpointAndCall<T>(url);
             // shut down the process
@@ -171,13 +199,13 @@ namespace AssemblyTests
         {
             if (expected.Contains('{') || expected.Contains('}'))
             {
-                var parsed = ConventionalRoute.Parse(expected, null).Value;
+                var parsed = ConventionalRoute.Parse(expected, null, null).Value;
                 var instantiated = parsed.InstantiateTemplateWith(expectedController, expectedAction, expectedArea, false);
                 return instantiated;
             }
             else
             {
-                return "/" + expected;
+                return expected;
             }
         }
 
@@ -191,7 +219,7 @@ namespace AssemblyTests
             {
                 if (received.Actions.Any() && !received.Actions.All(x => x.IsConventional || x.Routes.Count == 0))
                 {
-                    scope.FailWith($"Controller {received.ClassName} is not expected to contain any non conventional actions with routes");
+                    scope.FailWith($"Controller {received.Namespace}::{received.ClassName} is not expected to contain any non conventional actions with routes");
                     return;
                 }
                 else
@@ -200,11 +228,11 @@ namespace AssemblyTests
                 }
             }
 
-            var controller = $"{expected?.ControllerNamespace}::{expected?.ControllerClassName}";
+            var controller = $"{expected?.ControllerNamespace}::{expected?.ControllerClassName ?? expected?.ControllerName}";
 
             if (expected != null && received == null)
             {
-                scope.FailWith($"Controller ${controller} is expected to be routable");
+                scope.FailWith($"Controller {expected} is expected to be routable");
                 return;
             }
 
@@ -224,7 +252,8 @@ namespace AssemblyTests
 
             if (receivedMethod.IsConventional)
             {
-                scope.FailWith($"{received.Namespace}::{received.ClassName} - {expected!.ActionMethodName} route is conventional");
+                var allRoutesString = string.Join(", ", receivedMethod.Routes.Select(r => r.Path));
+                scope.FailWith($"{received.Namespace}::{received.ClassName} [{allRoutesString}] - {expected!.ActionMethodName} action is conventional but expected route: {expected.Routes.First()} is attribute based");
                 return;
             }
 

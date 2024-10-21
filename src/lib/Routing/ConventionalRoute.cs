@@ -1,13 +1,18 @@
+using System.Text.Json.Serialization;
 using FluentResults;
+using Makspll.Pathfinder.Intermediate;
 
 namespace Makspll.Pathfinder.Routing;
 public class ConventionalRoute
 {
+
+    public required ConventionalRouteType? Type { get; set; }
     /**
      * The template for the conventional route i.e. 
      * `{area}/api/{controller}/{action}/{id?}/{custom:string}`
      */
-    public required IEnumerable<RouteTemplatePart> Template { get; set; }
+    public required IEnumerable<RouteTemplatePart> Template
+    { get; set; }
 
     public required Dictionary<string, string>? Defaults { get; set; }
 
@@ -20,10 +25,10 @@ public class ConventionalRoute
         return part.DefaultValue;
     }
 
-    public RouteTemplatePart? Controller => Template.FirstOrDefault(x => x.PartName == "controller");
-    public RouteTemplatePart? Action => Template.FirstOrDefault(x => x.PartName == "action");
-    public RouteTemplatePart? Area => Template.FirstOrDefault(x => x.PartName == "area");
-    public RouteTemplatePart? Id => Template.FirstOrDefault(x => x.PartName == "id");
+    public RouteTemplatePart? ControllerPart => Template.FirstOrDefault(x => x.PartName == "controller");
+    public RouteTemplatePart? ActionPart => Template.FirstOrDefault(x => x.PartName == "action");
+    public RouteTemplatePart? AreaPart => Template.FirstOrDefault(x => x.PartName == "area");
+    public RouteTemplatePart? IdPart => Template.FirstOrDefault(x => x.PartName == "id");
 
 
     public string InstantiateTemplateWith(string? controller, string? action, string? area, bool fillInWithDefaults = false)
@@ -48,14 +53,21 @@ public class ConventionalRoute
                     parts.Add(part.DefaultValue ?? "");
             }
         }
+        var output = string.Join('/', parts);
 
-        return '/' + string.Join('/', parts);
+        if (!output.StartsWith('/'))
+            output = '/' + output;
+
+        if (output.EndsWith('/'))
+            output = output[..^1];
+
+        return output;
     }
 
     /**
     * Tries to parse a valid route template and returns a ConventionalRoute object or parse failure.
     */
-    public static Result<ConventionalRoute> Parse(string route, Dictionary<string, string>? defaults)
+    public static Result<ConventionalRoute> Parse(string route, Dictionary<string, string>? defaults, ConventionalRouteType? type)
     {
 
         var routeParts = route.Split('/');
@@ -74,6 +86,7 @@ public class ConventionalRoute
 
         return new ConventionalRoute
         {
+            Type = type,
             Template = templateParts,
             Defaults = defaults
         };
@@ -164,5 +177,28 @@ public class ConventionalRoute
                 return $"{{{PartName}{constraints}{defaultValue}{optional}}}";
             }
         }
+    }
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum ConventionalRouteType
+{
+    MVC,
+    API
+}
+
+public static class ConventionalRouteExtensions
+{
+    /// <summary>
+    /// Converts a ConventionalRouteType to a ControllerKind
+    /// </summary>
+    public static ControllerKind? ToControllerKind(this ConventionalRouteType? type)
+    {
+        return type switch
+        {
+            ConventionalRouteType.MVC => ControllerKind.MVC,
+            ConventionalRouteType.API => ControllerKind.API,
+            _ => null
+        };
     }
 }

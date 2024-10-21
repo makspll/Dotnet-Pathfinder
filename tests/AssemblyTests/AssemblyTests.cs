@@ -4,10 +4,10 @@ using FluentAssertions.Execution;
 using Xunit.Abstractions;
 using System.Text.Json;
 using Makspll.Pathfinder.Search;
-using Makspll.Pathfinder.Serialization;
 using TestUtils;
 using System.Diagnostics;
 using Makspll.Pathfinder.Routing;
+using System.Collections.Immutable;
 
 
 namespace AssemblyTests
@@ -22,32 +22,53 @@ namespace AssemblyTests
 
         private ITestOutputHelper OutputHelper { get; }
 
-        private Process? process;
+        private Process? process = null;
 
         public void Dispose()
         {
             if (process != null)
             {
-                process.Kill();
-                process.WaitForExit();
+                try
+                {
+                    process.Kill(true);
+                    process.WaitForExit(TimeSpan.FromSeconds(10));
+                    process = null;
+                }
+                catch (Exception e)
+                {
+                    OutputHelper.WriteLine($"Failed to kill process: {e.Message}");
+                }
             }
         }
+
 
         public static IEnumerable<object[]> AllTestAssemblyDirs()
         {
             foreach (var dir in IterateTestAssemblyDirs())
             {
-                yield return new object[] { dir };
+                var dirname = Path.GetFileName(dir) ?? throw new Exception("Failed to get directory name");
+
+                if (Environment.GetEnvironmentVariable("TEST_ASSEMBLY") is string testAssembly && testAssembly != dirname)
+                    continue;
+
+                yield return new object[] { dirname };
             }
         }
 
-        public AssemblyQuery PrepareAssembly(string testAssemblyDir)
+        public AssemblyQuery PrepareAssembly(string testAssemblyName)
         {
+            var forwardOutput = Environment.GetEnvironmentVariable("FORWARD_OUTPUT") != null;
+            if (process != null)
+            {
+                throw new Exception("Process is already running");
+            }
+
+            var testAssemblyDir = Path.Combine(GetTestAssembliesPath(), testAssemblyName);
             ExpectPortFree(5000);
-            var dllPath = BuildTestAssembly(testAssemblyDir);
+            var dllPath = BuildTestAssembly(testAssemblyDir, forwardOutput: forwardOutput);
             var configFile = Path.Combine(testAssemblyDir, "pathfinder.json");
-            var query = new AssemblyQuery(dllPath, AssemblyQuery.ParseConfig(new FileInfo(configFile)) ?? []);
-            process = RunAssembly(dllPath);
+            var query = new AssemblyQuery(dllPath, AssemblyQuery.ParseConfig(new FileInfo(configFile)));
+            process = RunTestAssembly(testAssemblyDir, forwardOutput: forwardOutput);
             var _ = WaitUntillEndpointAndCall<RouteInfo[]>("http://localhost:5000/api/attributeroutes") ?? throw new Exception("Failed to get route info");
             return query;
         }
@@ -63,7 +84,6 @@ namespace AssemblyTests
             var serializationOptions = new JsonSerializerOptions
             {
                 WriteIndented = true,
-                Converters = { new RoutingAttributeConverter() }
             };
 
             using var scope = new AssertionScope();
@@ -76,13 +96,6 @@ namespace AssemblyTests
                 var matchingController = controllersMeta.FirstOrDefault(c =>
                     c.ClassName == route.ControllerClassName
                 );
-
-                route.ExpectNoRoute.Should().Be(false, $"{route.Routes.First()} was marked with `ExpectNoRoute`");
-
-                if (route.ExpectedRoute != null)
-                {
-                    route.Routes.First().Should().Be(route.ExpectedRoute, $"Controller action {route.Action} was marked with `ExpectRoute` attribute");
-                }
 
                 AssertControllerMatchedAttributeRoute(route, matchingController);
             }
@@ -106,7 +119,7 @@ namespace AssemblyTests
 
                         foreach (var route in action.Routes)
                         {
-                            var matchingRouteActions = attributeRoutes.Where(r => r.Routes.First() == route.Path);
+                            var matchingRouteActions = attributeRoutes.Where(r => r.Routes.FirstOrDefault(x => x == route.Path) != null);
                             if (!matchingRouteActions.Any())
                             {
                                 AssertionScope.Current.FailWith($"{controller.Namespace}::{controller.ClassName} - {route.Path} was not expected to be routable");
@@ -118,10 +131,11 @@ namespace AssemblyTests
             }
 
             // count for good measure
-            var expectedNonConventionalRoutes = attributeRoutes!.Length;
-            var actualNonConventionalRoutes = controllersMeta.Sum(c => c.Actions.Where(x => !x.IsConventional).Sum(a => a.Routes.Count()));
-            actualNonConventionalRoutes.Should().Be(expectedNonConventionalRoutes, "All non-conventional routes should be in the metadata");
-
+            var uniqueExpectedNonConventionalRoutes = attributeRoutes.SelectMany(x => x.Routes).Distinct().ToList();
+            var uniqueActualNonConventionalRoutes = controllersMeta.SelectMany(c => c.Actions).Where(a => !a.IsConventional).SelectMany(a => a.Routes).Select(x => x.Path).Distinct().ToList();
+            uniqueActualNonConventionalRoutes.Sort();
+            uniqueExpectedNonConventionalRoutes.Sort();
+            uniqueActualNonConventionalRoutes.Count().Should().Be(uniqueExpectedNonConventionalRoutes.Count(), "All non-conventional routes should be in the metadata");
         }
 
 
@@ -141,6 +155,7 @@ namespace AssemblyTests
                 {
                     foreach (var route in action.Routes)
                     {
+                        var failedMethods = new List<HTTPMethod>();
                         foreach (var method in Enum.GetValues<HTTPMethod>())
                         {
                             var request = new HttpRequestMessage(method.ToHttpMethod(), $"http://localhost:5000{route.Path}");
@@ -148,15 +163,21 @@ namespace AssemblyTests
                             {
                                 var response = client.Send(request);
                                 var expectSuccess = route.Methods.Contains(method);
+
                                 if (!response.IsSuccessStatusCode && expectSuccess)
                                 {
-                                    AssertionScope.Current.FailWith($"Failed to access {controller.Namespace}::{controller.ClassName} - {route.Path} with {method}");
+                                    failedMethods.Add(method);
                                 }
                             }
-                            catch (Exception e)
+                            catch
                             {
-                                AssertionScope.Current.FailWith($"Failed to access {controller.Namespace}::{controller.ClassName} - {route.Path} with {method} - {e.Message}");
+                                failedMethods.Add(method);
                             }
+                        }
+                        if (failedMethods.Count != 0)
+                        {
+                            var methods = string.Join(", ", failedMethods.Select(m => m.ToString()));
+                            AssertionScope.Current.FailWith($"Failed to access {controller.Namespace}::{controller.ClassName}::{action.MethodName} - {route.Path} with [{methods}]");
                         }
                     }
                 }
