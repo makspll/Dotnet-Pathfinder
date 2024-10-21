@@ -37,7 +37,7 @@ public class RouteCalculator(FrameworkVersion version)
 
         return new Route
         {
-            Methods = AllowedMethods(action.RoutingAttributes, routeCandidate, action.ActionName(_version), action.Controller.Kind),
+            Methods = AllowedMethods(action.RoutingAttributes, routeCandidate, action.Method.Name, action.ActionName(_version), action.Controller.Kind),
             Path = path
         };
     }
@@ -87,7 +87,7 @@ public class RouteCalculator(FrameworkVersion version)
 
         var path = template.InstantiateTemplateWith(routedController, routedAction, null);
 
-        var allowedMethods = AllowedMethods(action.RoutingAttributes, null, action.ActionName(_version), action.Controller.Kind);
+        var allowedMethods = AllowedMethods(action.RoutingAttributes, null, action.Method.Name, action.ActionName(_version), action.Controller.Kind);
 
         action.ConventionalRoutes.Add(
             new Route { Path = path, Methods = allowedMethods }
@@ -137,7 +137,7 @@ public class RouteCalculator(FrameworkVersion version)
         return coalescedRoutes;
     }
 
-    List<HTTPMethod> AllowedMethods(IEnumerable<RoutingAttribute> allAttributes, RoutingAttribute? routeSource, string actionName, ControllerKind controllerKind)
+    List<HTTPMethod> AllowedMethods(IEnumerable<RoutingAttribute> allAttributes, RoutingAttribute? routeSource, string methodName, string actionName, ControllerKind controllerKind)
     {
         var otherMethods = allAttributes.SelectMany(x => x.HttpMethodOverride(_version) ?? []).OfType<HTTPMethod>();
         var sourceMethod = routeSource?.HttpMethodOverride(_version);
@@ -158,7 +158,8 @@ public class RouteCalculator(FrameworkVersion version)
             // .net framework also uses the name of the action to determine the allowed method
             foreach (var httpMethod in Enum.GetValues<HTTPMethod>())
             {
-                if (actionName.StartsWith(httpMethod.ToString(), StringComparison.OrdinalIgnoreCase))
+                // note method name not action name for some reason
+                if (methodName.StartsWith(httpMethod.ToString(), StringComparison.OrdinalIgnoreCase))
                 {
                     return [httpMethod];
                 }
