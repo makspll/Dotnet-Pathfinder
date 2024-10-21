@@ -5,7 +5,7 @@ Finds and outputs all API routes found in a .NET assembly in textual or JSON for
 - Attribute based routing
 - Conventional routing (templates + defaults have to be specified in a config file)
 - .NET core support
-- .NET framework support incoming
+- .NET framework support
 - JSON and Text output
 
 
