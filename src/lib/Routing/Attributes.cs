@@ -4,30 +4,6 @@ using Makspll.Pathfinder.Intermediate;
 
 namespace Makspll.Pathfinder.Routing;
 
-public enum RoutePropagation
-{
-    /// <summary>
-    /// If an action has no route, will propagate to it and enable routing, also propagates to sibling routing attributes with no route (takes precedence over routing attrs at controller level)
-    /// </summary>
-    Propagate,
-
-    /// <summary>
-    /// If an action has no route, this will not propagate to it, will only propagate to actions with already existing routes.
-    /// </summary>
-    PropagateToRoutes,
-
-    /// <summary>
-    /// If an action has no route already, then propagate to it, but do not propagate to actions with existing routes, i.e. will not act like a prefix
-    /// </summary>
-    PropagateToUnrouted,
-
-    /// <summary>
-    /// The attribute does not propagate to actions or does not have a route
-    /// </summary>
-    None,
-}
-
-
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum HTTPMethod
 {
@@ -96,9 +72,9 @@ public abstract class RoutingAttribute(string name)
     public virtual bool CanGenerateRoute(FrameworkVersion version) => Route(version) != null;
 
     /// <summary>
-    /// Return the route propagation strategy of the attribute
+    /// If true will propagate the attribute route and/or prefix to actions
     /// </summary>
-    public virtual RoutePropagation Propagation(FrameworkVersion version) => RoutePropagation.None;
+    public virtual bool PropagateToActions(FrameworkVersion version) => false;
 
     /// <summary>
     /// If the attribute overrides the HTTP method, return it
@@ -136,9 +112,7 @@ public class RouteAttribute(string? path) : RoutingAttribute("Route")
     public override string? RoutePrefix(FrameworkVersion version) => version != FrameworkVersion.DOTNET_FRAMEWORK ? Path : null;
 
     // in .NET Framework, Route attributes do not act like prefixes, they are standalone routes at controller level only
-    public override RoutePropagation Propagation(FrameworkVersion version) => version == FrameworkVersion.DOTNET_FRAMEWORK ?
-        RoutePropagation.PropagateToUnrouted :
-        RoutePropagation.Propagate;
+    public override bool PropagateToActions(FrameworkVersion version) => true;
 
     public override bool CanGenerateRoute(FrameworkVersion version) => true;
 }
@@ -151,8 +125,7 @@ public class RoutePrefixAttribute(string? prefix) : RoutingAttribute("RoutePrefi
     public override string? RoutePrefix(FrameworkVersion version) => Prefix;
 
     public override bool CanGenerateRoute(FrameworkVersion version) => false;
-
-    public override RoutePropagation Propagation(FrameworkVersion version) => RoutePropagation.PropagateToRoutes;
+    public override bool PropagateToActions(FrameworkVersion version) => true;
 }
 
 public class HttpAttribute(HTTPMethod method, string? route) : RoutingAttribute($"Http{char.ToUpper(method.ToString()[0])}{method.ToString()[1..].ToLower()}")

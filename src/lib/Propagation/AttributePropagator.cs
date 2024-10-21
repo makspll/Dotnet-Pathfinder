@@ -25,13 +25,12 @@ public class AttributePropagator(FrameworkVersion version)
 
     private PropagatedRoute? ConvertToPropagatedRoute(RoutingAttribute attribute, bool fromController)
     {
-        if (attribute.Propagation(_version) != RoutePropagation.None && (attribute.Route(_version) != null) || attribute.RoutePrefix(_version) != null)
+        if (attribute.PropagateToActions(_version) && (attribute.Route(_version) != null) || attribute.RoutePrefix(_version) != null)
         {
             return new PropagatedRoute
             {
                 Route = attribute.Route(_version),
                 Prefix = attribute.RoutePrefix(_version),
-                PropagationType = attribute.Propagation(_version),
                 FromController = fromController,
             };
         }
