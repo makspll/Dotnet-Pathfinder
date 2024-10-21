@@ -7,6 +7,7 @@ using Makspll.Pathfinder.Search;
 using TestUtils;
 using System.Diagnostics;
 using Makspll.Pathfinder.Routing;
+using System.Collections.Immutable;
 
 
 namespace AssemblyTests
@@ -130,10 +131,11 @@ namespace AssemblyTests
             }
 
             // count for good measure
-            var expectedNonConventionalRoutes = attributeRoutes.Sum(x => x.Routes.Count())!;
-            var actualNonConventionalRoutes = controllersMeta.Sum(c => c.Actions.Where(x => !x.IsConventional).Sum(a => a.Routes.Count()));
-            actualNonConventionalRoutes.Should().Be(expectedNonConventionalRoutes, "All non-conventional routes should be in the metadata");
-
+            var uniqueExpectedNonConventionalRoutes = attributeRoutes.SelectMany(x => x.Routes).Distinct().ToList();
+            var uniqueActualNonConventionalRoutes = controllersMeta.SelectMany(c => c.Actions).Where(a => !a.IsConventional).SelectMany(a => a.Routes).Select(x => x.Path).Distinct().ToList();
+            uniqueActualNonConventionalRoutes.Sort();
+            uniqueExpectedNonConventionalRoutes.Sort();
+            uniqueActualNonConventionalRoutes.Count().Should().Be(uniqueExpectedNonConventionalRoutes.Count(), "All non-conventional routes should be in the metadata");
         }
 
 

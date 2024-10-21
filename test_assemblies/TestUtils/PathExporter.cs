@@ -15,6 +15,7 @@ using System;
 using System.Collections;
 
 #elif NET472
+using ActionNameAttribute = System.Web.Mvc.ActionNameAttribute;
 using System.Collections.Specialized;
 using System.Web;
 using System.Collections.ObjectModel;
@@ -324,7 +325,12 @@ namespace TestUtils
                 output = output.Concat(attributeMvcRouteInfos).ToList();
             if (includeConventional)
                 output = output.Concat(conventionalMVCRoutes).ToList();
-
+                
+            // when checking for http methods we also iterate through all action selectors
+            // this includes filters like NonAction
+            // if no http methods are allowed, we have ignored the action via attribute
+            output = output.Where(x => x.HttpMethods.Any()).ToList();
+            
             output.ForEach(x => {
                 x.Routes = x.Routes.Select(r => {
                     if (!r.StartsWith("/")){
@@ -338,6 +344,7 @@ namespace TestUtils
 
             return output;
         }
+        
 
         public static List<RouteInfo> ParseConventionalRoute(Route route, Assembly callingAssembly)
         {
@@ -400,15 +407,15 @@ namespace TestUtils
 
                 foreach (var action in availableActions)
                 {
+                    var actionName = GetConventionalMvcActionName(action);
                     var instantiatedRoute = route.Url
                         .Replace("{controller}", controllerDescriptor.ControllerName)
-                        .Replace("{action}", action.ActionName);
+                        .Replace("{action}", actionName);
 
                     var routes = new List<string>() { instantiatedRoute };
-
                     var routeInfo = new RouteInfo(GetAllowedHttpMethods(action), routes)
                     {
-                        Action = action.ActionName,
+                        Action = actionName,
                         ControllerName = controllerDescriptor.ControllerName,
                         ControllerClassName = controllerDescriptor.ControllerType.Name,
                         ControllerNamespace = controllerDescriptor.ControllerType.Namespace,
@@ -436,7 +443,8 @@ namespace TestUtils
                 actionMethod = ((MethodInfo)MethodInfo.GetValue(actionDescriptor)).Name;
             }
 
-            return new RouteInfo(GetAllowedHttpMethods(actionDescriptor), routes)
+            var allowedMethods = GetAllowedHttpMethods(actionDescriptor);
+            return new RouteInfo(allowedMethods, routes)
             {
                 Action = actionDescriptor.ActionName,
                 ActionMethodName = actionMethod,
@@ -454,22 +462,40 @@ namespace TestUtils
             if (descriptor.GetSelectors().Count == 0)
             {
                 methods = _ALL_METHODS.Select(httpMethod => httpMethod.ToString()).ToList();
+                return methods;
             }
-
-            foreach (var selector in descriptor.GetSelectors())
+            
+            foreach (var method in _ALL_METHODS)
             {
-                foreach (var method in _ALL_METHODS)
-                {
-                    var httpRequest = new MockHttpRequest(method);
-                    var context = new MockHttpContext(httpRequest);
-                    var controllerContext = new MockControllerContext(context);
-                    if (selector(controllerContext))
-                        methods.Add(method);
-                }
+                var httpRequest = new MockHttpRequest(method);
+                var context = new MockHttpContext(httpRequest);
+                var controllerContext = new MockControllerContext(context);
+                if (descriptor.GetSelectors().All(x => x(controllerContext)))
+                    methods.Add(method);
             }
 
             return methods;
         }
+
+        public static string GetConventionalMvcActionName(ActionDescriptor descriptor)
+        {
+            var overrides = descriptor.GetCustomAttributes(true).OfType<ActionNameAttribute>().ToList();
+
+            if (overrides.FirstOrDefault() is { } a)
+                return a.Name;
+
+            return descriptor.ActionName;
+        }
+
+        // public static string GetActionName(ActionDescriptor descriptor)
+        // {
+        //     var overrides = descriptor.GetCustomAttributes(true).OfType<ActionNameSelectorAttribute>();
+        //
+        //     if (overrides.Any())
+        //     {
+        //         overrides.First().IsValidName()
+        //     }
+        // }
 
     }
 

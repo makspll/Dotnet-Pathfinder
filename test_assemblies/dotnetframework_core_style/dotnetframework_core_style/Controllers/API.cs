@@ -100,15 +100,16 @@ namespace dotnetframework472.Api
     {
 
         [Route("apiHttpMethodWithSameRouteAsAnotherButDifferentMethod")]
-        public string HttpMethodWithSameRouteAsAnotherButNoMethod() => "hello";
+        public string HttpMethodWithSameRouteAsAnotherButNoMethod() => "post";
 
         [Route("apiHttpMethodWithSameRouteAsAnotherButDifferentMethod")]
-        public string HttpMethodWithSameRouteAsAnotherButGetMethod() => "hello";
+        [HttpGet]
+        [HttpDelete]
+        public string HttpMethodWithSameRouteAsAnotherButGetMethod() => "get and delete";
 
         [Route("apiHttpMethodWithSameRouteAsAnotherButDifferentMethod")]
-        [HttpPost]
-        public string HttpMethodWithSameRouteAsAnotherButPostMethod() => "hello";
-
+        [HttpPut]
+        public string HttpMethodWithSameRouteAsAnotherButPostMethod() => "put";
     }
 
     [Route("apiacceptverbsscontroller")]

@@ -2,7 +2,7 @@
 
   <PropertyGroup>
    <TargetFrameworks>net472;netcoreapp3.1;net8.0</TargetFrameworks>
-    <!-- <TargetFramework>net472</TargetFramework> -->
+<!--     <TargetFramework>net472</TargetFramework> -->
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>TestUtils</RootNamespace>

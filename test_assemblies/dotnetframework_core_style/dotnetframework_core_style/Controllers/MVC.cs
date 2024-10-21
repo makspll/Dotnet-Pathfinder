@@ -105,6 +105,7 @@ namespace dotnetframework472.Mvc
         public Task HttpMethodWithSameRouteAsAnotherButNoMethod() => Task.FromResult(new HttpStatusCodeResult(200));
 
         [Route("HttpMethodWithSameRouteAsAnotherButDifferentMethod")]
+        [HttpGet]
         public Task HttpMethodWithSameRouteAsAnotherButGetMethod() => Task.FromResult(new HttpStatusCodeResult(200));
 
         [Route("HttpMethodWithSameRouteAsAnotherButDifferentMethod")]

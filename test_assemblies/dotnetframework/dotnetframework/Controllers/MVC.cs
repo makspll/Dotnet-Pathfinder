@@ -100,10 +100,12 @@ namespace dotnetframework472.Mvc
         public Task HttpMethodWithSameRouteAsAnotherButNoMethod() => Task.FromResult(new HttpStatusCodeResult(200));
 
         [Route("HttpMethodWithSameRouteAsAnotherButDifferentMethod")]
+        [HttpGet]
+        [HttpDelete]
         public Task HttpMethodWithSameRouteAsAnotherButGetMethod() => Task.FromResult(new HttpStatusCodeResult(200));
 
         [Route("HttpMethodWithSameRouteAsAnotherButDifferentMethod")]
-        [HttpPost]
+        [HttpPut]
         public Task HttpMethodWithSameRouteAsAnotherButPostMethod() => Task.FromResult(new HttpStatusCodeResult(200));
 
     }
@@ -184,9 +186,11 @@ namespace dotnetframework472.Mvc
     {
         [Route("[action]")]
         [ActionName("OverridenActionName")]
+        [HttpGet]
         public Task Get() => Task.FromResult(new HttpStatusCodeResult(200));
 
         [Route("[action]")]
+        [HttpPost]
         public Task Post() => Task.FromResult(new HttpStatusCodeResult(200));
     }
 }
