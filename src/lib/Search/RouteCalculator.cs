@@ -37,7 +37,7 @@ public class RouteCalculator(FrameworkVersion version)
 
         var path = Join(prefix, suffix);
 
-        if (string.IsNullOrEmpty(path))
+        if (path == null)
             return null;
 
         return new Route
@@ -83,11 +83,11 @@ public class RouteCalculator(FrameworkVersion version)
         // calculating a conventional routes is simple, we fill in the values of the route template if we match, leave the rest as parameters 
         // https://learn.microsoft.com/en-us/aspnet/web-api/overview/web-api-routing-and-actions/routing-and-action-selection
 
-        var routedController = template.ControllerPart != null ? action.Controller.ControllerName : template.Defaults?.GetValueOrDefault("controller");
+        var routedController = template.ControllerPart != null ? action.Controller.ControllerName : template.GetPartDefaultValue("controller");
         if (routedController != action.Controller.ControllerName)
             return;
 
-        var routedAction = template.ActionPart != null ? action.ActionName(_version) : template.Defaults?.GetValueOrDefault("action");
+        var routedAction = template.ActionPart != null ? action.ActionName(_version) : template.GetPartDefaultValue("action");
         if (routedAction != action.ActionName(_version))
             return;
 

@@ -3,12 +3,15 @@ REMOVE_CLASSES_LIST=InheritingControllerNoRoute \
 	InheritingController2NoRoute \
 	DefaultConventionalController \
 	DefaultControllerConventional \
-	ConventionalControllerOverriddenActionNames 
+	ConventionalControllerOverriddenActionNames \
+	ControllerWithForeignBase
 COPY_FILES_LIST=$(shell cat .gitignore)
 COPY_DIR="${MAKEFILE_DIR}../dotnet8"
 COPY_TARGET="${MAKEFILE_DIR}"
 TEST_UTILS_DIR="${MAKEFILE_DIR}../TestUtils"
 PORT=5000
+
+all: build start
 
 build: copy_routes
 	@dotnet build -f net8.0

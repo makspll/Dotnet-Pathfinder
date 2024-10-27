@@ -246,4 +246,112 @@ namespace dotnet8
         [HttpPost("[action]")]
         public Task<OkObjectResult> Post() => Task.FromResult(new OkObjectResult("ControllerWithPlaceholdersPost"));
     }
+
+
+    public class ControllerWithForeignBase : TestUtils.ForeignControllerBase
+    {
+        [HttpGet]
+        [Route("controllerwithforeignbase/get")]
+        public Task<OkObjectResult> Get() => Task.FromResult(new OkObjectResult("ControllerWithForeignBase"));
+
+        [HttpPost]
+        public Task<OkObjectResult> Post() => Task.FromResult(new OkObjectResult("ControllerWithForeignBasePost"));
+    }
+
+    [Route("literals/{controller}")]
+    [ApiController]
+    public class ControllerWithRouteTemplateLiterals : Controller
+    {
+
+        [HttpGet("{action}")]
+        [ActionName("OverridenActionName")]
+        public Task<OkObjectResult> Get() => Task.FromResult(new OkObjectResult("ControllerWithRouteTemplateLiterals{action}overridden"));
+
+        [HttpGet("{action}")]
+        public Task<OkObjectResult> Post() => Task.FromResult(new OkObjectResult("ControllerWithRouteTemplateLiterals{action}"));
+
+        [HttpGet("get")]
+        public Task<OkObjectResult> Delete() => Task.FromResult(new OkObjectResult("ControllerWithRouteTemplateLiteralsGet"));
+    }
+
+    [Route("complexliterals/{controller?}")]
+    public class ControllerWithComplexTemplateLiterals : Controller
+    {
+        [HttpGet("{action?}")]
+        public Task<OkObjectResult> Get() => Task.FromResult(new OkObjectResult("a"));
+
+        [HttpGet("{action}")]
+        public Task<OkObjectResult> Post() => Task.FromResult(new OkObjectResult("b"));
+    }
+
+
+    [Route("complexliteralsreverse/{action?}")]
+    public class ControllerWithComplexTemplateLiteralsReverse : Controller
+    {
+        [HttpGet("{controller?}")]
+        public Task<OkObjectResult> Get() => Task.FromResult(new OkObjectResult("a"));
+
+        [HttpGet("{controller}")]
+        public Task<OkObjectResult> Post() => Task.FromResult(new OkObjectResult("b"));
+    }
+
+    [Route("complexliterals2/{controller?}")]
+    public class ControllerWithComplexTemplateLiterals2 : Controller
+    {
+        [HttpGet("a/{action?}")]
+        public Task<OkObjectResult> Get() => Task.FromResult(new OkObjectResult("a"));
+
+        [HttpGet("a/{action}")]
+        public Task<OkObjectResult> Post() => Task.FromResult(new OkObjectResult("b"));
+    }
+
+    [Route("complexliteralsnocontroller")]
+    public class ControllerWithComplexTemplateLiteralsNoController : Controller
+    {
+        [HttpGet("{action?}")]
+        public Task<OkObjectResult> Get() => Task.FromResult(new OkObjectResult("a"));
+
+        [HttpGet("{action}")]
+        public Task<OkObjectResult> Post() => Task.FromResult(new OkObjectResult("b"));
+    }
+
+    [Route("complexliteralsonlycontroller/{controller?}")]
+    public class ControllerWithComplexTemplateLiteralsNoActions : Controller
+    {
+        [HttpGet("get")]
+        public Task<OkObjectResult> Get() => Task.FromResult(new OkObjectResult("a"));
+
+        [HttpGet("post")]
+        public Task<OkObjectResult> Post() => Task.FromResult(new OkObjectResult("b"));
+
+        [Route("")]
+        public Task<OkObjectResult> Default() => Task.FromResult(new OkObjectResult("d"));
+    }
+
+    [Route("controllerwithemptyrouteandprefix")]
+    public class ControllerWithEmptyRouteAndPrefix : Controller
+    {
+        [HttpGet("")]
+        public Task<OkObjectResult> Get() => Task.FromResult(new OkObjectResult("a"));
+    }
+
+    [Route("[[]]")]
+    public class ControllerWithEscapedSquareBrackets : Controller
+    {
+        [HttpGet("[[controller]]")]
+        public Task<OkObjectResult> Get() => Task.FromResult(new OkObjectResult("a"));
+
+        [HttpGet("[[action]]")]
+        public Task<OkObjectResult> Post() => Task.FromResult(new OkObjectResult("b"));
+    }
+
+    [Route("{{}}")]
+    public class ControllerWithEscapedCurlyBrackets : Controller
+    {
+        [HttpGet("{{controller}}")]
+        public Task<OkObjectResult> Get() => Task.FromResult(new OkObjectResult("a"));
+
+        [HttpGet("{{action}}")]
+        public Task<OkObjectResult> Post() => Task.FromResult(new OkObjectResult("b"));
+    }
 }

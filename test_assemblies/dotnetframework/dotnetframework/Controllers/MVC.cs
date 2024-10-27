@@ -241,4 +241,16 @@ namespace dotnetframework472.Mvc
         public string Del() => "del";
     }
 
+
+    public class ControllerForeignBaseController : TestUtils.ForeignMVCControllerBase
+    {
+        [Route("controllerforeignbaseget")]
+        [HttpGet]
+        public string Get() => "get";
+
+        [HttpPost]
+        public string Post() => "post";
+    }
+
+
 }

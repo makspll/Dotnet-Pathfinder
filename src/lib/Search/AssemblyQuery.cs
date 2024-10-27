@@ -71,7 +71,12 @@ public class AssemblyQuery(ModuleDefMD module, FrameworkVersion frameworkVersion
             }
         }
 
+        placeholderInliner.SwapSpecialCharacters(candidateControllers);
+
         placeholderInliner.InlinePlaceholders(candidateControllers);
+
+        placeholderInliner.UnescapeSwappedSpecialCharacters(candidateControllers);
+
         return candidateConverter.ConvertCandidates(candidateControllers);
     }
 }
