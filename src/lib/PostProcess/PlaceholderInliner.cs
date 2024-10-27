@@ -4,7 +4,14 @@ using Makspll.Pathfinder.Routing;
 
 namespace Makspll.Pathfinder.PostProcess;
 
-public partial class PlaceholderInliner(FrameworkVersion version)
+public interface IPlaceholderInliner
+{
+    void InlinePlaceholders(IEnumerable<ControllerCandidate> controllers);
+    void SwapSpecialCharacters(IEnumerable<ControllerCandidate> controllers);
+    void UnescapeSwappedSpecialCharacters(IEnumerable<ControllerCandidate> controllers);
+}
+
+public partial class PlaceholderInliner(FrameworkVersion version) : IPlaceholderInliner
 {
     private readonly FrameworkVersion _version = version;
     private readonly Dictionary<string, string> specialCharMapping = new()

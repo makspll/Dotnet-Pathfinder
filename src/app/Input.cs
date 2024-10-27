@@ -1,14 +1,11 @@
 using System;
 using CommandLine;
+using Makspll.Pathfinder;
 
 namespace Makspll.PathfinderApp;
 
 
-public enum OutputFormat
-{
-    JSON,
-    Text
-}
+
 
 public record Args
 {

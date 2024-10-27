@@ -10,7 +10,7 @@ public class Action
     public required List<Route> Routes { get; set; }
     public required bool IsConventional { get; set; }
 
-    public required IEnumerable<SerializedAttribute> Attributes { get; init; }
+    public required List<SerializedAttribute> Attributes { get; init; }
 }
 
 public class Route

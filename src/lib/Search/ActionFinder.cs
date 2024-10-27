@@ -4,7 +4,13 @@ using Makspll.Pathfinder.Routing;
 
 namespace Makspll.Pathfinder.Search;
 
-public class ActionFinder(FrameworkVersion version)
+public interface IActionFinder
+{
+    void PopulateActions(ControllerCandidate controller);
+    void PopulateConventionalActions(ControllerCandidate controller);
+}
+
+public class ActionFinder(FrameworkVersion version) : IActionFinder
 {
     private readonly FrameworkVersion _version = version;
 

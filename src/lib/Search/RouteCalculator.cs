@@ -3,12 +3,18 @@ using Makspll.Pathfinder.Routing;
 
 namespace Makspll.Pathfinder.Search;
 
-public class RouteCalculator(FrameworkVersion version)
+public interface IRouteCalculator
+{
+    void PopulateRoutes(ActionCandidate action);
+    void PopulateConventionalRoutes(ActionCandidate action, ConventionalRoute template);
+}
+
+public class RouteCalculator(FrameworkVersion version) : IRouteCalculator
 {
 
     private readonly FrameworkVersion _version = version;
 
-    public List<HTTPMethod> DefaultMethods(ControllerKind controllerKind) =>
+    private List<HTTPMethod> DefaultMethods(ControllerKind controllerKind) =>
         (_version == FrameworkVersion.DOTNET_FRAMEWORK && controllerKind == ControllerKind.API) ?
             [HTTPMethod.POST] :
             [.. Enum.GetValues<HTTPMethod>()];

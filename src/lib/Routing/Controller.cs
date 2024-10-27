@@ -33,7 +33,7 @@ public class Controller
     /// <summary>
     /// Attributes marking up the controller
     /// </summary>
-    public required IEnumerable<RoutingAttribute> Attributes { get; init; }
+    public required List<SerializedAttribute> Attributes { get; init; }
 
     public static string ParseControllerName(string className)
     {
