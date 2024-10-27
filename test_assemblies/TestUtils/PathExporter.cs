@@ -154,9 +154,8 @@ namespace TestUtils
                     if (route != null && !route.StartsWith("/"))
                         route = "/" + route;
 
-
                     List<string> all_routes = route == null ? new List<string>() { } : new List<string> { route };
-
+                    
                     if (route == null)
                     {
                         // figure out which conventional routes route to this controller
@@ -199,6 +198,15 @@ namespace TestUtils
                             .ToList();
                         all_routes = all_conventional_routes!;
                     }
+
+                    // for attribute routes with placeholders
+
+                    all_routes = all_routes.Select(x => 
+                        x.Replace("{{", "Ѻ").Replace("}}", "ѻ")
+                            .Replace("{controller}", controllerName)
+                            .Replace("{action}", action)
+                            .Replace("Ѻ", "{").Replace("ѻ", "}")
+                    ).ToList();
 
                     return new RouteInfo(httpMethods, all_routes)
                     {
@@ -246,8 +254,8 @@ namespace TestUtils
             {
                 var isAttributeRouted =
                     routeMethod.ActionDescriptor.Properties.Any(x =>
-                        (string)x.Key == "MS_IsAttributeRouted" && (bool)x.Value) || 
-                    routeMethod.ActionDescriptor.ControllerDescriptor.Properties.Any(x => 
+                        (string)x.Key == "MS_IsAttributeRouted" && (bool)x.Value) ||
+                    routeMethod.ActionDescriptor.ControllerDescriptor.Properties.Any(x =>
                         (x.Key as string) == "MS_IsAttributeRouted" && (bool)x.Value);
                 var isConventional = !isAttributeRouted;
                 if (!includeAttributeRoutes && isAttributeRouted)
@@ -325,15 +333,18 @@ namespace TestUtils
                 output = output.Concat(attributeMvcRouteInfos).ToList();
             if (includeConventional)
                 output = output.Concat(conventionalMVCRoutes).ToList();
-                
+
             // when checking for http methods we also iterate through all action selectors
             // this includes filters like NonAction
             // if no http methods are allowed, we have ignored the action via attribute
             output = output.Where(x => x.HttpMethods.Any()).ToList();
-            
-            output.ForEach(x => {
-                x.Routes = x.Routes.Select(r => {
-                    if (!r.StartsWith("/")){
+
+            output.ForEach(x =>
+            {
+                x.Routes = x.Routes.Select(r =>
+                {
+                    if (!r.StartsWith("/"))
+                    {
                         r = "/" + r;
                     }
                     if (r.EndsWith("/"))
@@ -344,7 +355,7 @@ namespace TestUtils
 
             return output;
         }
-        
+
 
         public static List<RouteInfo> ParseConventionalRoute(Route route, Assembly callingAssembly)
         {
@@ -464,7 +475,7 @@ namespace TestUtils
                 methods = _ALL_METHODS.Select(httpMethod => httpMethod.ToString()).ToList();
                 return methods;
             }
-            
+
             foreach (var method in _ALL_METHODS)
             {
                 var httpRequest = new MockHttpRequest(method);

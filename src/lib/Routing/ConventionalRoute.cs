@@ -14,7 +14,7 @@ public class ConventionalRoute
     public required IEnumerable<RouteTemplatePart> Template
     { get; set; }
 
-    public required Dictionary<string, string>? Defaults { get; set; }
+    public required Dictionary<string, string>? Defaults { private get; init; }
 
     public string? GetPartDefaultValue(string partName)
     {

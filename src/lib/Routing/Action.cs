@@ -17,6 +17,11 @@ public class Route
 {
     public required string Path { get; set; }
     public required List<HTTPMethod> Methods { get; init; }
+
+    public static string RemoveEmptySegments(string path)
+    {
+        return path.Replace("//", "/");
+    }
 }
 
 public record SerializedAttribute

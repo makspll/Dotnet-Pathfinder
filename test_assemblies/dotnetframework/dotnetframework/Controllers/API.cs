@@ -230,4 +230,15 @@ namespace dotnetframework472.Api
         [HttpDelete]
         public string Del() => "del";
     }
+
+    public class ApiControllerForeignBaseController : TestUtils.ForeignApiControllerBase
+    {
+        [Route("apicontrollerforeignbaseget")]
+        [HttpGet]
+        public string Get() => "get";
+
+        [HttpPost]
+        public string Post() => "post";
+    }
+
 }
