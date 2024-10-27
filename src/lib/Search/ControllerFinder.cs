@@ -5,7 +5,12 @@ using Makspll.Pathfinder.Routing;
 
 namespace Makspll.Pathfinder.Search;
 
-public class ControllerFinder(FrameworkVersion _version)
+public interface IControllerFinder
+{
+    IEnumerable<ControllerCandidate> FindControllers(ModuleDef module);
+}
+
+public class ControllerFinder(FrameworkVersion _version) : IControllerFinder
 {
     private readonly FrameworkVersion version = _version;
 

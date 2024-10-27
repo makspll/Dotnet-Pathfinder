@@ -3,7 +3,12 @@ using Makspll.Pathfinder.Routing;
 
 namespace Makspll.Pathfinder.Propagation;
 
-public class AttributePropagator(FrameworkVersion version)
+public interface IAttributePropagator
+{
+    void PropagateAttributes(ControllerCandidate controller);
+}
+
+public class AttributePropagator(FrameworkVersion version) : IAttributePropagator
 {
     private readonly FrameworkVersion _version = version;
 

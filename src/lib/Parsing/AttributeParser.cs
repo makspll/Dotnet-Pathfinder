@@ -1,3 +1,4 @@
+using System.Text;
 using dnlib.DotNet;
 using Makspll.Pathfinder.Routing;
 
@@ -6,6 +7,23 @@ namespace Makspll.Pathfinder.Parsing;
 public static class AttributeParser
 {
 
+    private static readonly HashSet<string> routingAttributeNames = new()
+    {
+        "RouteAttribute",
+        "RoutePrefixAttribute",
+        "ApiControllerAttribute",
+        "NonActionAttribute",
+        "ActionNameAttribute",
+        "AreaAttribute",
+        "AcceptVerbsAttribute",
+        "HttpGetAttribute",
+        "HttpPostAttribute",
+        "HttpPutAttribute",
+        "HttpDeleteAttribute",
+        "HttpPatchAttribute",
+        "HttpHeadAttribute",
+        "HttpOptionsAttribute"
+    };
 
     public static T? GetAttributeNamedArgOrConstructorArg<T>(CustomAttribute attribute, string name, int index = -1)
     {
@@ -32,6 +50,34 @@ public static class AttributeParser
         {
             throw new ArgumentException($"Expected argument of type {typeof(T).FullName} but got {output.GetType().FullName}");
         }
+    }
+
+    private static object SimplifyObjectValue(object value)
+    {
+        if (value is UTF8String utf8String)
+        {
+            return Encoding.UTF8.GetString(utf8String.Data);
+        }
+        return value;
+    }
+
+    public static SerializedAttribute? ParseNonRoutingAttribute(CustomAttribute attribute)
+    {
+        if (routingAttributeNames.Contains(attribute.AttributeType.Name))
+        {
+            return null;
+        }
+
+
+        var constructorArguments = attribute.ConstructorArguments.Select((x, i) => (i.ToString(), x.Value)).ToList();
+        var namedArguments = attribute.NamedArguments.Select(x => (Encoding.UTF8.GetString(x.Name.Data), x.Value));
+
+        var allProperties = constructorArguments.Concat(namedArguments).ToDictionary(x => x.Item1, x => SimplifyObjectValue(x.Value));
+        return new SerializedAttribute
+        {
+            Name = attribute.AttributeType.Name,
+            Properties = allProperties
+        };
     }
 
 

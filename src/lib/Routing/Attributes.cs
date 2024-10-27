@@ -1,10 +1,9 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using Makspll.Pathfinder.Intermediate;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace Makspll.Pathfinder.Routing;
 
-[JsonConverter(typeof(JsonStringEnumConverter))]
+[JsonConverter(typeof(StringEnumConverter))]
 public enum HTTPMethod
 {
     GET,
@@ -46,7 +45,7 @@ public abstract class RoutingAttribute(string name)
     public SerializedAttribute IntoSerializedAttribute(FrameworkVersion version) => new()
     {
         Name = Name,
-        Properties = new Dictionary<string, object> { { "Test", "test" } }//Properties(version).Where(x => x.Value != null).ToDictionary()
+        Properties = Properties(version).Where(x => x.Value != null).ToDictionary()!
     };
 
     /// <summary>

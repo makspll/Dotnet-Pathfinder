@@ -10,47 +10,135 @@ using Makspll.Pathfinder.RoutingConfig;
 
 namespace Makspll.Pathfinder.Search;
 
+public class AssemblyQueryBuilder
+{
+    private ModuleDefMD? LoadedModule { get; set; }
+    private ParsedPathfinderConfig? Config { get; set; }
+    private FrameworkVersion? DetectedFramework { get; set; }
+    private IRouteCalculator? RouteCalculator { get; set; }
+    private IActionFinder? ActionFinder { get; set; }
+    private IAttributePropagator? AttributePropagator { get; set; }
+    private IPlaceholderInliner? PlaceholderInliner { get; set; }
+    private ICandidateConverter? CandidateConverter { get; set; }
+    private IControllerFinder? ControllerFinder { get; set; }
+
+
+    /// <summary>
+    /// Set the module to be analyzed, and automatically detect the framework version
+    /// </summary>
+    public AssemblyQueryBuilder WithModule(ModuleDefMD module)
+    {
+        LoadedModule = module;
+        DetectedFramework = module.DetectFrameworkVersion();
+        return this;
+    }
+
+    /// <summary>
+    /// Set the module to be analyzed, and automatically detect the framework version, from a path to the DLL file of this assembly
+    /// </summary>
+    public AssemblyQueryBuilder WithModule(string dll)
+    {
+        LoadedModule = ModuleDefMD.Load(dll, ModuleDef.CreateModuleContext());
+        DetectedFramework = LoadedModule.DetectFrameworkVersion();
+        return this;
+    }
+
+    /// <summary>
+    /// Override the automatically detected framework version
+    /// </summary>
+    public AssemblyQueryBuilder WithOverrideDetectedFramework(FrameworkVersion frameworkVersion)
+    {
+        DetectedFramework = frameworkVersion;
+        return this;
+    }
+
+    /// <summary>
+    /// Set the configuration to be used for the analysis
+    /// </summary>
+    /// <param name="config"></param>
+    /// <returns></returns>
+    public AssemblyQueryBuilder WithConfig(ParsedPathfinderConfig? config)
+    {
+        Config = config;
+        return this;
+    }
+
+    public AssemblyQueryBuilder WithRouteCalculator(RouteCalculator routeCalculator)
+    {
+        RouteCalculator = routeCalculator;
+        return this;
+    }
+
+    public AssemblyQueryBuilder WithActionFinder(ActionFinder actionFinder)
+    {
+        ActionFinder = actionFinder;
+        return this;
+    }
+
+    public AssemblyQueryBuilder WithAttributePropagator(AttributePropagator attributePropagator)
+    {
+        AttributePropagator = attributePropagator;
+        return this;
+    }
+
+    public AssemblyQueryBuilder WithPlaceholderInliner(PlaceholderInliner placeholderInliner)
+    {
+        PlaceholderInliner = placeholderInliner;
+        return this;
+    }
+
+    public AssemblyQueryBuilder WithCandidateConverter(CandidateConverter candidateConverter)
+    {
+        CandidateConverter = candidateConverter;
+        return this;
+    }
+
+    public AssemblyQueryBuilder WithControllerFinder(ControllerFinder controllerFinder)
+    {
+        ControllerFinder = controllerFinder;
+        return this;
+    }
+
+    public AssemblyQuery Build()
+    {
+        if (LoadedModule == null)
+            throw new InvalidOperationException("Module must be set before building AssemblyQuery");
+
+        if (DetectedFramework == null)
+            throw new InvalidOperationException("Framework must be set before building AssemblyQuery");
+
+        var query = new AssemblyQuery(LoadedModule, DetectedFramework.Value, Config);
+
+        if (RouteCalculator != null)
+            query.routeCalculator = RouteCalculator;
+        if (ActionFinder != null)
+            query.actionFinder = ActionFinder;
+        if (AttributePropagator != null)
+            query.attributePropagator = AttributePropagator;
+        if (PlaceholderInliner != null)
+            query.placeholderInliner = PlaceholderInliner;
+        if (CandidateConverter != null)
+            query.candidateConverter = CandidateConverter;
+        if (ControllerFinder != null)
+            query.controllerFinder = ControllerFinder;
+
+        return query;
+    }
+}
+
+
 public class AssemblyQuery(ModuleDefMD module, FrameworkVersion frameworkVersion, ParsedPathfinderConfig? config = null)
 {
     readonly ModuleDefMD LoadedModule = module;
     readonly ParsedPathfinderConfig config = config ?? new();
 
-    public readonly FrameworkVersion DetectedFramework = frameworkVersion;
-    private readonly RouteCalculator routeCalculator = new(frameworkVersion);
-    private readonly ActionFinder actionFinder = new(frameworkVersion);
-    private readonly AttributePropagator attributePropagator = new(frameworkVersion);
-    private readonly PlaceholderInliner placeholderInliner = new(frameworkVersion);
-    private readonly CandidateConverter candidateConverter = new(frameworkVersion);
-    private readonly ControllerFinder controllerFinder = new(frameworkVersion);
-
-    public AssemblyQuery(string dll, ParsedPathfinderConfig? config = null) : this(ModuleDefMD.Load(dll, ModuleDef.CreateModuleContext()), config ?? FindAndParseNearestConfig(dll)) { }
-    public AssemblyQuery(ModuleDefMD module, ParsedPathfinderConfig? config) : this(module, module.DetectFrameworkVersion(), config) { }
-
-    public static ParsedPathfinderConfig ParseConfig(FileInfo configFile)
-    {
-        if (!configFile.Exists)
-            return new();
-
-        var config = JsonSerializer.Deserialize<PathfinderConfig>(File.ReadAllText(configFile.FullName));
-
-        if (config == null)
-            return new();
-
-        return new ParsedPathfinderConfig(config);
-    }
-
-    /// <summary>
-    /// Finds and parses the nearest pathfinder.json file in the directory tree starting from the given directory. Returns null if no file is found.
-    /// </summary>
-    public static ParsedPathfinderConfig FindAndParseNearestConfig(string dll)
-    {
-        var dllDirectory = Path.GetDirectoryName(dll);
-        var configPath = FileSearch.FindNearestFile("pathfinder.json", dllDirectory ?? dll);
-        if (configPath == null)
-            return new();
-
-        return ParseConfig(configPath);
-    }
+    public FrameworkVersion DetectedFramework = frameworkVersion;
+    internal IRouteCalculator routeCalculator = new RouteCalculator(frameworkVersion);
+    internal IActionFinder actionFinder = new ActionFinder(frameworkVersion);
+    internal IAttributePropagator attributePropagator = new AttributePropagator(frameworkVersion);
+    internal IPlaceholderInliner placeholderInliner = new PlaceholderInliner(frameworkVersion);
+    internal ICandidateConverter candidateConverter = new CandidateConverter(frameworkVersion);
+    internal IControllerFinder controllerFinder = new ControllerFinder(frameworkVersion);
 
 
     public IEnumerable<Controller> FindAllControllers()

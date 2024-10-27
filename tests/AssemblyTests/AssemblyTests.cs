@@ -9,6 +9,7 @@ using System.Diagnostics;
 using Makspll.Pathfinder.Routing;
 using System.Collections.Immutable;
 using System.Text.RegularExpressions;
+using Makspll.Pathfinder;
 
 
 namespace AssemblyTests
@@ -68,7 +69,10 @@ namespace AssemblyTests
             ExpectPortFree(5000);
             var dllPath = BuildTestAssembly(testAssemblyDir, forwardOutput: forwardOutput);
             var configFile = Path.Combine(testAssemblyDir, "pathfinder.json");
-            var query = new AssemblyQuery(dllPath, AssemblyQuery.ParseConfig(new FileInfo(configFile)));
+            var query = new AssemblyQueryBuilder()
+                .WithConfig(Pathfinder.ParseConfig(new FileInfo(configFile)))
+                .WithModule(dllPath)
+                .Build();
             process = RunTestAssembly(testAssemblyDir, forwardOutput: forwardOutput);
             var _ = WaitUntillEndpointAndCall<RouteInfo[]>("http://localhost:5000/api/attributeroutes") ?? throw new Exception("Failed to get route info");
             return query;
