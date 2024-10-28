@@ -195,19 +195,6 @@ namespace AssemblyTests
             process.WaitForExit();
         }
 
-        public static string InstantiateRoute(string expected, string expectedController, string expectedAction, string expectedArea)
-        {
-            if (expected.Contains('{') || expected.Contains('}'))
-            {
-                var parsed = ConventionalRoute.Parse(expected, null, null).Value;
-                var instantiated = parsed.InstantiateTemplateWith(expectedController, expectedAction, expectedArea, false);
-                return instantiated;
-            }
-            else
-            {
-                return expected;
-            }
-        }
 
         /// <summary>
         /// Assert that the received controller matches the expected route, for an attribute based route (non-conventional)

@@ -246,7 +246,7 @@ namespace AssemblyTests
                 // TODO: area
                 foreach (var conventionalRoute in route.Routes)
                 {
-                    var instantiatedRoute = InstantiateRoute(conventionalRoute, route.ControllerName!, route.Action!, "{area}");
+                    var instantiatedRoute = conventionalRoute;
                     if (!matchingAction.Routes.Any(r => r.Path == instantiatedRoute))
                     {
                         AssertionScope.Current.FailWith($"Route {instantiatedRoute} was not found in the metadata for {route.ControllerClassName}::{route.ActionMethodName}. Found routes: {string.Join(", ", matchingAction.Routes.Select(r => r.Path))}");

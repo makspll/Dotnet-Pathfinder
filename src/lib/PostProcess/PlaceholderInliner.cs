@@ -14,19 +14,25 @@ public interface IPlaceholderInliner
 public partial class PlaceholderInliner(FrameworkVersion version) : IPlaceholderInliner
 {
     private readonly FrameworkVersion _version = version;
-    private readonly Dictionary<string, string> specialCharMapping = new()
+
+    public static readonly string LEFT_BRACE_ESCAPE_PLACEHOLDER = "Ѻ";
+    public static readonly string RIGHT_BRACE_ESCAPE_PLACEHOLDER = "ѻ";
+    public static readonly string LEFT_BRACKET_ESCAPE_PLACEHOLDER = "҈";
+    public static readonly string RIGHT_BRACKET_ESCAPE_PLACEHOLDER = "҉";
+
+    public static readonly Dictionary<string, string> specialCharMapping = new()
     {
-        { "[[", "҈" },
-        { "]]", "҉" },
-        { "{{", "Ѻ"},
-        { "}}", "ѻ"}
+        { "[[", LEFT_BRACKET_ESCAPE_PLACEHOLDER },
+        { "]]", RIGHT_BRACKET_ESCAPE_PLACEHOLDER },
+        { "{{", LEFT_BRACE_ESCAPE_PLACEHOLDER},
+        { "}}", RIGHT_BRACE_ESCAPE_PLACEHOLDER}
     };
 
-    private readonly Dictionary<string, string> specialCharMappingReverse = new() {
-        { "҈", "[" },
-        { "҉", "]" },
-        { "Ѻ", "{" },
-        { "ѻ", "}" }
+    public static readonly Dictionary<string, string> specialCharMappingReverse = new() {
+        { LEFT_BRACKET_ESCAPE_PLACEHOLDER, "[" },
+        { RIGHT_BRACKET_ESCAPE_PLACEHOLDER, "]" },
+        { LEFT_BRACE_ESCAPE_PLACEHOLDER, "{" },
+        { RIGHT_BRACE_ESCAPE_PLACEHOLDER, "}" }
     };
 
 
@@ -59,7 +65,7 @@ public partial class PlaceholderInliner(FrameworkVersion version) : IPlaceholder
 
     public void UnescapeSwappedSpecialCharacters(IEnumerable<ControllerCandidate> controllers)
     {
-        AllRoutes(controllers).ToList().ForEach(x =>
+        AllRoutes(controllers, true).ToList().ForEach(x =>
         {
             foreach (var (key, value) in specialCharMappingReverse)
             {
@@ -68,13 +74,20 @@ public partial class PlaceholderInliner(FrameworkVersion version) : IPlaceholder
         });
     }
 
-    private static IEnumerable<(ControllerCandidate Controller, ActionCandidate Action, Route Route)> AllRoutes(IEnumerable<ControllerCandidate> controllers)
+    private static IEnumerable<(ControllerCandidate Controller, ActionCandidate Action, Route Route)> AllRoutes(IEnumerable<ControllerCandidate> controllers, bool includeConventional = false)
     {
         foreach (var action in AllActions(controllers))
         {
             foreach (var route in action.Action.Routes)
             {
                 yield return (action.Controller, action.Action, route);
+            }
+            if (includeConventional)
+            {
+                foreach (var conventionalRoute in action.Action.ConventionalRoutes)
+                {
+                    yield return (action.Controller, action.Action, conventionalRoute);
+                }
             }
         }
     }

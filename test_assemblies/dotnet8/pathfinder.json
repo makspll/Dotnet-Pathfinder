@@ -4,6 +4,12 @@
             "Template": "conventionalprefix/{controller}/{action}"
         },
         {
+            "Template": "conventional{{controller}}/{controller}/{action}"
+        },
+        {
+            "Template": "conventional2/[controller]/[action]"
+        },
+        {
             "Template": "conventionalprefix2/{controller}",
             "Defaults": {
                 "action": "DefaultAction"

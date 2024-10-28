@@ -34,12 +34,6 @@ public class RouteCalculator(FrameworkVersion version) : IRouteCalculator
             return null;
 
         var prefix = propagatedPrefixes.FirstOrDefault(x => x.Prefix != null)?.Prefix;
-        // // If the propagation needs a standalone route, we don't propagate the prefix without one
-        // if (suffix == null && propagatedPrefix?.PropagationType == RoutePropagation.PropagateToRoutes)
-        //     prefix = null;
-        // // if the attribute only propagates to unrouted actions, don't propagate in the case of an existing suffix
-        // else if (suffix != null && propagatedPrefix?.PropagationType == RoutePropagation.PropagateToUnrouted)
-        //     prefix = null;
 
         var path = Join(prefix, suffix);
 
