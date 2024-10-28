@@ -19,13 +19,13 @@ Finds and outputs all API routes found in a .NET assembly in textual or JSON for
 - .NET 7 or later installed (only for running CLI, not in your project)
 
 ## CLI
-- dotnet tool install -g Makspll.Pathfinder
+- `dotnet tool install -g Makspll.Pathfinder`
 
 # Usage
 ```
-dotnet tool run pathfinder --help
+pathfinder --help
 dotnet build your-project
-dotnet tool run pathfinder **/bin/**/yourdllname.dll -o Text
+pathfinder **/bin/**/yourdllname.dll -o Text
 ```
 
 ![image](https://github.com/user-attachments/assets/adc9b60c-c991-46b0-b474-8de967666467)
