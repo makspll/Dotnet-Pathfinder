@@ -1,20 +1,28 @@
+using System.Text;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using FluentResults;
 using Makspll.Pathfinder.Intermediate;
+using Makspll.Pathfinder.PostProcess;
 
 namespace Makspll.Pathfinder.Routing;
-public class ConventionalRoute
+public partial class ConventionalRoute
 {
+
+    public static readonly Dictionary<string, string> CONVENTIONAL_SPECIAL_ESCAPE_PLACEHOLDERS = new()
+        {
+            {"{{", PlaceholderInliner.LEFT_BRACE_ESCAPE_PLACEHOLDER},
+            {"}}", PlaceholderInliner.RIGHT_BRACE_ESCAPE_PLACEHOLDER}
+        };
 
     public required ConventionalRouteType? Type { get; set; }
     /**
      * The template for the conventional route i.e. 
      * `{area}/api/{controller}/{action}/{id?}/{custom:string}`
      */
-    public required IEnumerable<RouteTemplatePart> Template
-    { get; set; }
+    private IEnumerable<RouteTemplatePart> Template = [];
 
-    public required Dictionary<string, string>? Defaults { private get; init; }
+    private Dictionary<string, string>? Defaults;
 
     public string? GetPartDefaultValue(string partName)
     {
@@ -31,29 +39,31 @@ public class ConventionalRoute
     public RouteTemplatePart? IdPart => Template.FirstOrDefault(x => x.PartName == "id");
 
 
+    /// <summary>
+    /// Instantiates the template with the given controller, action and area, filling in with defaults if specified.
+    /// Will include special characters symbolizing escaped braces like `{{ == Ѻ` and `}} == ѻ`
+    /// </summary>
     public string InstantiateTemplateWith(string? controller, string? action, string? area, bool fillInWithDefaults = false)
     {
         if (fillInWithDefaults)
             throw new NotImplementedException("Filling in with defaults is not yet implemented");
 
-        var parts = new List<string>();
+        var route = new StringBuilder();
         foreach (var part in Template)
         {
-            if (part.IsConstant)
-                parts.Add(part.PartName);
+            if (controller != null && part.PartName == "controller")
+                route.Append(controller);
+            else if (action != null && part.PartName == "action")
+                route.Append(action);
+            else if (area != null && part.PartName == "area")
+                route.Append(area);
             else
-            {
-                if (controller != null && part.PartName == "controller")
-                    parts.Add(controller);
-                else if (action != null && part.PartName == "action")
-                    parts.Add(action);
-                else if (area != null && part.PartName == "area")
-                    parts.Add(area);
-                else
-                    parts.Add(part.DefaultValue ?? "");
-            }
+                route.Append(part.ToString());
+
         }
-        var output = string.Join('/', parts);
+
+        var output = route.ToString();
+
 
         if (!output.StartsWith('/'))
             output = '/' + output;
@@ -64,24 +74,68 @@ public class ConventionalRoute
         return output;
     }
 
+    private static IEnumerable<(bool IsPlaceholder, string part)> IteratePartRanges(string part, Regex regex)
+    {
+        var matches = regex.Matches(part);
+
+        if (matches.Count == 0)
+        {
+            yield return (false, part);
+            yield break;
+        }
+
+        var lastIndexInclusive = 0;
+        foreach (Match match in matches)
+        {
+            var unprocessedCharactersSinceLastMatch = part[lastIndexInclusive..match.Index];
+            if (unprocessedCharactersSinceLastMatch.Length > 0)
+                yield return (false, unprocessedCharactersSinceLastMatch);
+            // also yield match
+            yield return (true, match.Value);
+            lastIndexInclusive = match.Index + match.Length;
+        }
+
+        var lastUnprocessedCharacters = part[lastIndexInclusive..];
+        if (lastUnprocessedCharacters.Length > 0)
+            yield return (false, lastUnprocessedCharacters);
+    }
+
     /**
     * Tries to parse a valid route template and returns a ConventionalRoute object or parse failure.
     */
-    public static Result<ConventionalRoute> Parse(string route, Dictionary<string, string>? defaults, ConventionalRouteType? type)
+    public static Result<ConventionalRoute> Parse(string route, Dictionary<string, string>? defaults, ConventionalRouteType? type, FrameworkVersion version)
     {
-
-        var routeParts = route.Split('/');
-        var templateParts = new List<RouteTemplatePart>();
-        for (int i = 0; i < routeParts.Length; i++)
+        if (version != FrameworkVersion.DOTNET_FRAMEWORK)
         {
-            var routePart = routeParts[i];
-            var templateRoutePart = RouteTemplatePart.Parse(routePart);
+            foreach (var mapping in CONVENTIONAL_SPECIAL_ESCAPE_PLACEHOLDERS)
+            {
+                route = route.Replace(mapping.Key, mapping.Value);
+            }
+        }
 
-            if (templateRoutePart.IsFailed)
-                return Result.Fail($"Failed to parse route part: {routePart}")
-                        .WithErrors(templateRoutePart.Errors);
-            else
+        var templateParts = new List<RouteTemplatePart>();
+        // the parts may be complex themselves, i.e. /{part}.{part2}/
+        var regex = PlaceholderPartRegex();
+        foreach (var (IsPlaceholder, part) in IteratePartRanges(route, regex))
+        {
+
+            if (IsPlaceholder)
+            {
+                var templateRoutePart = RouteTemplatePart.Parse(part);
+                if (templateRoutePart.IsFailed)
+                    return Result.Fail($"Failed to parse route part: {part}")
+                            .WithErrors(templateRoutePart.Errors);
                 templateParts.Add(templateRoutePart.Value);
+            }
+            else
+                templateParts.Add(new RouteTemplatePart
+                {
+                    PartName = part,
+                    IsOptional = false,
+                    Constraints = null,
+                    DefaultValue = null,
+                    IsConstant = true
+                });
         }
 
         return new ConventionalRoute
@@ -111,7 +165,9 @@ public class ConventionalRoute
          */
         public static Result<RouteTemplatePart> Parse(string part)
         {
-            if (!part.StartsWith('{') || !part.EndsWith('}'))
+            // allow escaping of special characters
+
+            if (!part.StartsWith('{') && !part.EndsWith('}'))
             {
                 return new RouteTemplatePart
                 {
@@ -172,12 +228,15 @@ public class ConventionalRoute
             else
             {
                 var optional = IsOptional ? "?" : "";
-                var constraints = Constraints != null ? ":" + string.Join(':', Constraints) : "";
+                var constraints = Constraints != null && Constraints.Any() ? ":" + string.Join(':', Constraints) : "";
                 var defaultValue = DefaultValue != null ? "=" + DefaultValue : "";
                 return $"{{{PartName}{constraints}{defaultValue}{optional}}}";
             }
         }
     }
+
+    [GeneratedRegex(@"\{[^{}]*?\}")]
+    private static partial Regex PlaceholderPartRegex();
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]

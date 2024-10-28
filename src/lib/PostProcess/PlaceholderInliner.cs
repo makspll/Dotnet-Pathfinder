@@ -14,35 +14,34 @@ public interface IPlaceholderInliner
 public partial class PlaceholderInliner(FrameworkVersion version) : IPlaceholderInliner
 {
     private readonly FrameworkVersion _version = version;
-    private readonly Dictionary<string, string> specialCharMapping = new()
+
+    public static readonly string LEFT_BRACE_ESCAPE_PLACEHOLDER = "Ѻ";
+    public static readonly string RIGHT_BRACE_ESCAPE_PLACEHOLDER = "ѻ";
+    public static readonly string LEFT_BRACKET_ESCAPE_PLACEHOLDER = "҈";
+    public static readonly string RIGHT_BRACKET_ESCAPE_PLACEHOLDER = "҉";
+
+    public static readonly Dictionary<string, string> specialCharMapping = new()
     {
-        { "[[", "҈" },
-        { "]]", "҉" },
-        { "{{", "Ѻ"},
-        { "}}", "ѻ"}
+        { "[[", LEFT_BRACKET_ESCAPE_PLACEHOLDER },
+        { "]]", RIGHT_BRACKET_ESCAPE_PLACEHOLDER },
+        { "{{", LEFT_BRACE_ESCAPE_PLACEHOLDER},
+        { "}}", RIGHT_BRACE_ESCAPE_PLACEHOLDER}
     };
 
-    private readonly Dictionary<string, string> specialCharMappingReverse = new() {
-        { "҈", "[" },
-        { "҉", "]" },
-        { "Ѻ", "{" },
-        { "ѻ", "}" }
+    public static readonly Dictionary<string, string> specialCharMappingReverse = new() {
+        { LEFT_BRACKET_ESCAPE_PLACEHOLDER, "[" },
+        { RIGHT_BRACKET_ESCAPE_PLACEHOLDER, "]" },
+        { LEFT_BRACE_ESCAPE_PLACEHOLDER, "{" },
+        { RIGHT_BRACE_ESCAPE_PLACEHOLDER, "}" }
     };
 
 
 
     public void InlinePlaceholders(IEnumerable<ControllerCandidate> controllers)
     {
-        // not supported in .NET Framework
-        // neither syntax
         if (_version != FrameworkVersion.DOTNET_FRAMEWORK)
         {
-            Inline(controllers,
-                (ControllerPlaceholderRegex(), (controller, action) => [controller.ControllerName]),
-                (ActionPlaceholderRegex(), (controller, action) => [action.ActionName(_version)]),
-                (OptionalControllerPlaceholderRegex(), (controller, action) => [controller.ControllerName, ""]),
-                (OptionalActionPlaceholderRegex(), (controller, action) => [action.ActionName(_version), ""])
-            );
+            Inline(controllers);
         }
     }
 
@@ -59,7 +58,7 @@ public partial class PlaceholderInliner(FrameworkVersion version) : IPlaceholder
 
     public void UnescapeSwappedSpecialCharacters(IEnumerable<ControllerCandidate> controllers)
     {
-        AllRoutes(controllers).ToList().ForEach(x =>
+        AllRoutes(controllers, true).ToList().ForEach(x =>
         {
             foreach (var (key, value) in specialCharMappingReverse)
             {
@@ -68,13 +67,20 @@ public partial class PlaceholderInliner(FrameworkVersion version) : IPlaceholder
         });
     }
 
-    private static IEnumerable<(ControllerCandidate Controller, ActionCandidate Action, Route Route)> AllRoutes(IEnumerable<ControllerCandidate> controllers)
+    private static IEnumerable<(ControllerCandidate Controller, ActionCandidate Action, Route Route)> AllRoutes(IEnumerable<ControllerCandidate> controllers, bool includeConventional = false)
     {
         foreach (var action in AllActions(controllers))
         {
             foreach (var route in action.Action.Routes)
             {
                 yield return (action.Controller, action.Action, route);
+            }
+            if (includeConventional)
+            {
+                foreach (var conventionalRoute in action.Action.ConventionalRoutes)
+                {
+                    yield return (action.Controller, action.Action, conventionalRoute);
+                }
             }
         }
     }
@@ -90,7 +96,7 @@ public partial class PlaceholderInliner(FrameworkVersion version) : IPlaceholder
         }
     }
 
-    private void Inline(IEnumerable<ControllerCandidate> controllers, params (Regex, Func<ControllerCandidate, ActionCandidate, string[]>)[] replacements)
+    private void Inline(IEnumerable<ControllerCandidate> controllers)
     {
         foreach (var (controller, action) in AllActions(controllers))
         {

@@ -36,8 +36,6 @@ public class DummyAttributeCarrier
 public class AttributeParserTests
 {
 
-
-
     [Fact]
     public void TestAttributeGetPropOrField()
     {

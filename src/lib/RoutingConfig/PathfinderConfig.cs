@@ -7,12 +7,12 @@ namespace Makspll.Pathfinder.RoutingConfig;
 public class ParsedPathfinderConfig
 {
 
-    public ParsedPathfinderConfig(PathfinderConfig config)
+    public ParsedPathfinderConfig(PathfinderConfig config, FrameworkVersion version)
     {
 
         var results = config.ConventionalRoutes.Select(x =>
         {
-            var route = ConventionalRoute.Parse(x.Template, x.Defaults, x.Type);
+            var route = ConventionalRoute.Parse(x.Template, x.Defaults, x.Type, version);
             return (route, x.Type);
         }).ToList();
 

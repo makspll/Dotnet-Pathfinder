@@ -12,6 +12,17 @@ app.MapControllerRoute(
 );
 
 app.MapControllerRoute(
+    name: "default2",
+    pattern: "conventional{{controller}}/{controller}/{action}"
+);
+
+
+app.MapControllerRoute(
+    name: "default2",
+    pattern: "conventional2[controller]/[action]"
+);
+
+app.MapControllerRoute(
     name: "hello",
     pattern: "conventionalprefix2/{controller}",
     defaults: new { action = "DefaultAction" }

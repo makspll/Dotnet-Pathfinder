@@ -58,6 +58,18 @@ public static class AttributeParser
         {
             return Encoding.UTF8.GetString(utf8String.Data);
         }
+        else if (value is TypeDefOrRefSig typeDefOrRef)
+        {
+            return typeDefOrRef.ReflectionFullName;
+        }
+        // else if (value is ValueTypeSig valueType)
+        // {
+        //     return valueType.
+        // }
+        else if (value is List<CAArgument> list)
+        {
+            return list.Select(x => SimplifyObjectValue(x.Value)).ToList();
+        }
         return value;
     }
 
