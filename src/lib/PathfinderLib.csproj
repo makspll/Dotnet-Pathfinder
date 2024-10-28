@@ -9,6 +9,19 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <PackageId>Makspll.PathfinderLib</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>Maksymilian Mozolewski</Authors>
+    <Description>The library behind the Pathfinder CLI with configurable discovery mechanisms.</Description>
+    <PackageProjectUrl>https://github.com/makspll/Pathfinder</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/makspll/Pathfinder</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageTags>API, Routes, .NET</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>Pathfinder.jpg</PackageIcon>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.*" />
     <PackageReference Include="ANSI.Console" Version="2.5.0" />
@@ -19,4 +32,8 @@
     <PackageReference Include="System.Reflection.MetadataLoadContext" Version="8.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\"/>
+    <None Include="..\..\Pathfinder.jpg" Pack="true" PackagePath="\"/>
+  </ItemGroup>
 </Project>
