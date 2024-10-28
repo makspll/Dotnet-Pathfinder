@@ -1,6 +1,6 @@
 # Pathfinder
 <p align="center">
-    <img src="Pathfinder.jpg" alt="Pathfinder" width="300"/>
+    <img src="https://i.imgur.com/TEDoP2L.jpeg" alt="Pathfinder" width="300"/>
 </p>
 
 Finds and outputs all API routes found in a .NET assembly in textual or JSON format.
@@ -28,7 +28,7 @@ dotnet build your-project
 pathfinder **/bin/**/yourdllname.dll -o Text
 ```
 
-![image](https://github.com/user-attachments/assets/adc9b60c-c991-46b0-b474-8de967666467)
+![image](https://i.imgur.com/2Oz4HJA.png)
 
 # Configuration
 
