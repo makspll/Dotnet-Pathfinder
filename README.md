@@ -1,5 +1,6 @@
 # Pathfinder
-![Pathfinder](Pathfinder.png)
+![Pathfinder](Pathfinder.jpg)
+
 Finds and outputs all API routes found in a .NET assembly in textual or JSON format.
 
 ## Features
