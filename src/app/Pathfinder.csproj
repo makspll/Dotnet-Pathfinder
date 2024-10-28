@@ -2,14 +2,15 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFrameworks>net8.0;net7.0;</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
   <PropertyGroup>
     <PackageId>Makspll.Pathfinder</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.1.1</Version>
     <Authors>Maksymilian Mozolewski</Authors>
     <Description>CLI used to find all API routes present in a .NET core/framework assembly.</Description>
     <PackageProjectUrl>https://github.com/makspll/Pathfinder</PackageProjectUrl>
@@ -18,6 +19,8 @@
     <PackageTags>CLI, API, Routes, .NET</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>Pathfinder.jpg</PackageIcon>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>pathfinder</ToolCommandName>
   </PropertyGroup>
 
   <ItemGroup>

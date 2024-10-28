@@ -2,16 +2,17 @@
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFrameworks>net8.0;net7.0;</TargetFrameworks>
     <RootNamespace>Makspll.Pathfinder</RootNamespace>
     <AssemblyName>Makspll.Pathfinder</AssemblyName>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
   <PropertyGroup>
     <PackageId>Makspll.PathfinderLib</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.1.1</Version>
     <Authors>Maksymilian Mozolewski</Authors>
     <Description>The library behind the Pathfinder CLI with configurable discovery mechanisms.</Description>
     <PackageProjectUrl>https://github.com/makspll/Pathfinder</PackageProjectUrl>
