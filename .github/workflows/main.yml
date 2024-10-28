@@ -44,5 +44,5 @@ jobs:
 
     - name: Publish to NuGet if main branch
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-      run: dotnet nuget push ./artifacts/*.nupkg --api-key ${{ secrets.NUGET_DEPLOY_KEY }}
+      run: dotnet nuget push ./artifacts/*.nupkg --api-key ${{ secrets.NUGET_DEPLOY_KEY }} --source https://api.nuget.org/v3/index.json
     
