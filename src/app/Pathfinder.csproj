@@ -7,8 +7,25 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <PackageId>Makspll.Pathfinder</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>Maksymilian Mozolewski</Authors>
+    <Description>CLI used to find all API routes present in a .NET core/framework assembly.</Description>
+    <PackageProjectUrl>https://github.com/makspll/Pathfinder</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/makspll/Pathfinder</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageTags>CLI, API, Routes, .NET</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>Pathfinder.jpg</PackageIcon>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\lib\PathfinderLib.csproj" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\"/>
+    <None Include="..\..\Pathfinder.jpg" Pack="true" PackagePath="\"/>
   </ItemGroup>
 </Project>

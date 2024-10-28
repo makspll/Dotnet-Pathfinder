@@ -10,6 +10,7 @@ on:
 
 jobs:
   build:
+    name: Build & Test
     runs-on: ubuntu-latest
 
     steps:
@@ -23,3 +24,25 @@ jobs:
         
     - name: Test
       run: dotnet test
+
+  publish-to-nuget:
+    name: Package & Publish to NuGet (main)
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: '8.0.x'
+        
+    - name: Generate .nupkg
+      run: dotnet pack -o ./artifacts
+
+    - name: Publish to NuGet if main branch
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: dotnet nuget push ./artifacts/*.nupkg --api-key ${{ secrets.NUGET_DEPLOY_KEY }}
+    
