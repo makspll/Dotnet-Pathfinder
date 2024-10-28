@@ -13,11 +13,21 @@ Finds and outputs all API routes found in a .NET assembly in textual or JSON for
 - JSON and Text output
 - Configurable backing lib for projects with custom routing mechanisms
 
+# Installation
+
+## Prerequisites
+- .NET 7 or later installed (only for running CLI, not in your project)
+
+## CLI
+- dotnet tool install -g Makspll.Pathfinder
+
 # Usage
 ```
-dotnet build test_assemblies/dotnet8
-dotnet run --project src/app **/bin/**/dotnet8.dll -o Text
+dotnet tool run pathfinder --help
+dotnet build your-project
+dotnet tool run pathfinder **/bin/**/yourdllname.dll -o Text
 ```
+
 ![image](https://github.com/user-attachments/assets/adc9b60c-c991-46b0-b474-8de967666467)
 
 # Configuration

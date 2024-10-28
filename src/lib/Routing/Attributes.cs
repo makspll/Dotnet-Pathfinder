@@ -45,7 +45,7 @@ public abstract class RoutingAttribute(string name)
     public SerializedAttribute IntoSerializedAttribute(FrameworkVersion version) => new()
     {
         Name = Name,
-        Properties = Properties(version).Where(x => x.Value != null).ToDictionary()!
+        Properties = Properties(version).Where(x => x.Value != null).ToDictionary(x => x.Key, x => x.Value)!
     };
 
     /// <summary>
