@@ -32,23 +32,44 @@ public class ConventionalRouteParsingTests
     }
 
     [Fact]
-    public void TestConventionalRouteParsing()
+    public void TestConventionalRouteParsing_Core()
     {
-        var route = Parse("a/{controller}/{controller?}/{action}/{action?}/{id}/{id?}", null, null).Value;
+        var route = Parse("a/{controller}/{controller?}/{action}/{action?}/{id}/{id?}", null, null, FrameworkVersion.DOTNET_CORE).Value;
         Assert.Equal("/a/Home/Home/action/action/{id}/{id?}", route.InstantiateTemplateWith("Home", "action", null));
     }
 
     [Fact]
-    public void TestConventionalRouteParsing_StartAndEndSlash()
+    public void TestConventionalRouteParsing_StartAndEndSlash_Core()
     {
-        var route = Parse("/a/{controller}/{controller?}/{action}/{action?}/{id}/{id?}/", null, null).Value;
+        var route = Parse("/a/{controller}/{controller?}/{action}/{action?}/{id}/{id?}/", null, null, FrameworkVersion.DOTNET_CORE).Value;
         Assert.Equal("/a/Home/Home/action/action/{id}/{id?}", route.InstantiateTemplateWith("Home", "action", null));
     }
 
     [Fact]
-    public void TestConventionalRouteParsingComplex()
+    public void TestConventionalRouteParsingComplex_Core()
     {
-        var route = Parse("{hello}.{complex}{part:max(1,2)}/{part:regex(^\\d{{3}}-\\d{{2}}-\\d{{4}})?}/{banana}yoghurt{apple}lol{**catchall}", null, null).Value;
+        var route = Parse("{hello}.{complex}{part:max(1,2)}/{part:regex(^\\d{{3}}-\\d{{2}}-\\d{{4}})?}/{banana}yoghurt{apple}lol{**catchall}", null, null, FrameworkVersion.DOTNET_CORE).Value;
         Assert.Equal("/{hello}.{complex}{part:max(1,2)}/{part:regex(^\\dѺ3ѻ-\\dѺ2ѻ-\\dѺ4ѻ)?}/{banana}yoghurt{apple}lol{**catchall}", route.InstantiateTemplateWith(null, null, null));
+    }
+
+    [Fact]
+    public void TestConventionalRouteParsing_Framework()
+    {
+        var route = Parse("a/{controller}/{controller?}/{action}/{action?}/{id}/{id?}", null, null, FrameworkVersion.DOTNET_FRAMEWORK).Value;
+        Assert.Equal("/a/Home/Home/action/action/{id}/{id?}", route.InstantiateTemplateWith("Home", "action", null));
+    }
+
+    [Fact]
+    public void TestConventionalRouteParsing_StartAndEndSlash_FRAMEWORK()
+    {
+        var route = Parse("/a/{controller}/{controller?}/{action}/{action?}/{id}/{id?}/", null, null, FrameworkVersion.DOTNET_FRAMEWORK).Value;
+        Assert.Equal("/a/Home/Home/action/action/{id}/{id?}", route.InstantiateTemplateWith("Home", "action", null));
+    }
+
+    [Fact]
+    public void TestConventionalRouteParsingComplex_FRAMEWORK()
+    {
+        var route = Parse("{hello}.{complex}{part:max(1,2)}/{part:regex(^\\d{{3}}-\\d{{2}}-\\d{{4}})?}/{banana}yoghurt{apple}lol{**catchall}", null, null, FrameworkVersion.DOTNET_FRAMEWORK).Value;
+        Assert.Equal("/{hello}.{complex}{part:max(1,2)}/{part:regex(^\\d{{3}}-\\d{{2}}-\\d{{4}})?}/{banana}yoghurt{apple}lol{**catchall}", route.InstantiateTemplateWith(null, null, null));
     }
 }

@@ -39,16 +39,9 @@ public partial class PlaceholderInliner(FrameworkVersion version) : IPlaceholder
 
     public void InlinePlaceholders(IEnumerable<ControllerCandidate> controllers)
     {
-        // not supported in .NET Framework
-        // neither syntax
         if (_version != FrameworkVersion.DOTNET_FRAMEWORK)
         {
-            Inline(controllers,
-                (ControllerPlaceholderRegex(), (controller, action) => [controller.ControllerName]),
-                (ActionPlaceholderRegex(), (controller, action) => [action.ActionName(_version)]),
-                (OptionalControllerPlaceholderRegex(), (controller, action) => [controller.ControllerName, ""]),
-                (OptionalActionPlaceholderRegex(), (controller, action) => [action.ActionName(_version), ""])
-            );
+            Inline(controllers);
         }
     }
 
@@ -103,7 +96,7 @@ public partial class PlaceholderInliner(FrameworkVersion version) : IPlaceholder
         }
     }
 
-    private void Inline(IEnumerable<ControllerCandidate> controllers, params (Regex, Func<ControllerCandidate, ActionCandidate, string[]>)[] replacements)
+    private void Inline(IEnumerable<ControllerCandidate> controllers)
     {
         foreach (var (controller, action) in AllActions(controllers))
         {

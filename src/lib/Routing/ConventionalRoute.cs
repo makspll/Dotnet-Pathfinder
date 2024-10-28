@@ -103,12 +103,14 @@ public partial class ConventionalRoute
     /**
     * Tries to parse a valid route template and returns a ConventionalRoute object or parse failure.
     */
-    public static Result<ConventionalRoute> Parse(string route, Dictionary<string, string>? defaults, ConventionalRouteType? type)
+    public static Result<ConventionalRoute> Parse(string route, Dictionary<string, string>? defaults, ConventionalRouteType? type, FrameworkVersion version)
     {
-
-        foreach (var mapping in CONVENTIONAL_SPECIAL_ESCAPE_PLACEHOLDERS)
+        if (version != FrameworkVersion.DOTNET_FRAMEWORK)
         {
-            route = route.Replace(mapping.Key, mapping.Value);
+            foreach (var mapping in CONVENTIONAL_SPECIAL_ESCAPE_PLACEHOLDERS)
+            {
+                route = route.Replace(mapping.Key, mapping.Value);
+            }
         }
 
         var templateParts = new List<RouteTemplatePart>();
@@ -233,7 +235,7 @@ public partial class ConventionalRoute
         }
     }
 
-    [GeneratedRegex(@"\{.*?\}")]
+    [GeneratedRegex(@"\{[^{}]*?\}")]
     private static partial Regex PlaceholderPartRegex();
 }
 

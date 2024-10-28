@@ -1,6 +1,7 @@
 
 using System.Text.Json;
 using ANSIConsole;
+using dnlib.DotNet;
 using Makspll.Pathfinder.Routing;
 using Makspll.Pathfinder.RoutingConfig;
 using Makspll.Pathfinder.Search;
@@ -29,14 +30,17 @@ public class Pathfinder(IEnumerable<string> dllGlobs, string directory, string c
                 Path.Combine(dllDirectory, "..", "pathfinder.json"),
             };
 
-            var config = configFileLocations.Select(x => ParseConfig(new FileInfo(x))).FirstOrDefault(x => x != null);
+            var module = ModuleDefMD.Load(dll, ModuleDef.CreateModuleContext());
+            var frameworkVersion = module.DetectFrameworkVersion();
+
+            var config = configFileLocations.Select(x => ParseConfig(new FileInfo(x), frameworkVersion)).FirstOrDefault(x => x != null);
             if (config == null)
             {
                 Console.WriteLine($"No 'pathfinder.json' file specified or found when processing dll: '{dll}'. Ignoring".Color(ConsoleColor.Red));
             }
 
             query = new AssemblyQueryBuilder()
-                .WithModule(dll)
+                .WithModule(module)
                 .WithConfig(config)
                 .Build();
 
@@ -55,7 +59,7 @@ public class Pathfinder(IEnumerable<string> dllGlobs, string directory, string c
         return output;
     }
 
-    public static ParsedPathfinderConfig ParseConfig(FileInfo configFile)
+    public static ParsedPathfinderConfig ParseConfig(FileInfo configFile, FrameworkVersion version)
     {
         if (!configFile.Exists)
             return new();
@@ -65,20 +69,7 @@ public class Pathfinder(IEnumerable<string> dllGlobs, string directory, string c
         if (config == null)
             return new();
 
-        return new ParsedPathfinderConfig(config);
-    }
-
-    /// <summary>
-    /// Finds and parses the nearest pathfinder.json file in the directory tree starting from the given directory. Returns null if no file is found.
-    /// </summary>
-    public static ParsedPathfinderConfig FindAndParseNearestConfig(string dll)
-    {
-        var dllDirectory = Path.GetDirectoryName(dll);
-        var configPath = FileSearch.FindNearestFile("pathfinder.json", dllDirectory ?? dll);
-        if (configPath == null)
-            return new();
-
-        return ParseConfig(configPath);
+        return new ParsedPathfinderConfig(config, version);
     }
 }
 
