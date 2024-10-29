@@ -43,6 +43,10 @@ public class DummyAttributeCarrier
 
     [Dummy(null, typeof(List<GenericClass<int>>), ["a", "b", "c"], SomeEnum.A, [SomeEnum.A, SomeEnum.B])]
     public void Test4() { }
+
+    [Dummy(null, typeof(byte[]), ["a", "b", "c"], SomeEnum.A, [SomeEnum.A, SomeEnum.B])]
+    public void Test5() { }
+
 }
 
 public class SerializedAttributeTests
