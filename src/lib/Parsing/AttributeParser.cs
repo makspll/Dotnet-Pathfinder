@@ -54,21 +54,20 @@ public static class AttributeParser
 
     private static object SimplifyObjectValue(object value)
     {
-        if (value is UTF8String utf8String)
+        switch (value)
         {
-            return Encoding.UTF8.GetString(utf8String.Data);
-        }
-        else if (value is TypeDefOrRefSig typeDefOrRef)
-        {
-            return typeDefOrRef.ReflectionFullName;
-        }
-        else if (value is GenericInstSig genericSig)
-        {
-            return genericSig.ReflectionFullName;
-        }
-        else if (value is List<CAArgument> list)
-        {
-            return list.Select(x => SimplifyObjectValue(x.Value)).ToList();
+            case UTF8String utf8String:
+                return Encoding.UTF8.GetString(utf8String.Data);
+            case NonLeafSig nonLeafSig:
+                return nonLeafSig.ReflectionFullName;
+            case LeafSig leafSig:
+                return leafSig.ReflectionFullName;
+            case CAArgument argument:
+                return argument.Type.ReflectionFullName;
+            case List<CAArgument> list:
+                {
+                    return list.Select(x => SimplifyObjectValue(x.Value)).ToList();
+                }
         }
         return value;
     }
