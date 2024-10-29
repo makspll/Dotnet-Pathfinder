@@ -29,6 +29,15 @@ public class DummyAttribute(string? Test, Type Type, string[] Array, SomeEnum e,
     public SomeEnum[] Enums { get; } = enums;
 }
 
+public class ValueTypeAttribute(int Int, string String, bool Bool, char Char) : Attribute
+{
+    public int Int { get; } = Int;
+    public string String { get; } = String;
+    public bool Bool { get; } = Bool;
+
+    public char Char { get; } = Char;
+}
+
 public class DummyAttributeCarrier
 {
 
@@ -46,6 +55,9 @@ public class DummyAttributeCarrier
 
     [Dummy(null, typeof(byte[]), ["a", "b", "c"], SomeEnum.A, [SomeEnum.A, SomeEnum.B])]
     public void Test5() { }
+
+    [ValueTypeAttribute(1, "test", true, 'a')]
+    public void Test6() { }
 
 }
 
@@ -92,6 +104,31 @@ public class SerializedAttributeTests
                 {"4", new List<object> { 1, 2 }}
             }
         });
+        Assert.Equal(expectedSerialized, serialized);
+    }
+
+    [Fact]
+    public void TestSerializedValueTypes_AreValues()
+    {
+        var module = ModuleDefMD.Load(typeof(ValueTypeAttribute).Module);
+        var methods = module.Types.ToList().SelectMany(x => x.Methods.ToList());
+        var method = methods.First(x => x.Name == "Test6");
+
+
+        var attribute = method.CustomAttributes.FirstOrDefault();
+        var parsed = AttributeParser.ParseNonRoutingAttribute(attribute!);
+        var serialized = JsonConvert.SerializeObject(parsed);
+        var expectedSerialized = JsonConvert.SerializeObject(new SerializedAttribute
+        {
+            Name = "ValueTypeAttribute",
+            Properties = new() {
+                {"0", 1},
+                {"1", "test"},
+                {"2", true},
+                {"3", 'a'}
+            }
+        });
+
         Assert.Equal(expectedSerialized, serialized);
     }
 }
