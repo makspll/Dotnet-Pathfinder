@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Text;
 using dnlib.DotNet;
 using Makspll.Pathfinder.Routing;
@@ -6,9 +7,12 @@ namespace Makspll.Pathfinder.Parsing;
 
 public static class AttributeParser
 {
-
-    private static readonly HashSet<string> routingAttributeNames = new()
-    {
+    private static readonly HashSet<string> SerializeByValueTypes =
+    [
+        "String","Type"
+    ];
+    private static readonly HashSet<string> routingAttributeNames =
+    [
         "RouteAttribute",
         "RoutePrefixAttribute",
         "ApiControllerAttribute",
@@ -23,7 +27,9 @@ public static class AttributeParser
         "HttpPatchAttribute",
         "HttpHeadAttribute",
         "HttpOptionsAttribute"
-    };
+    ];
+
+    public record ValueType(string Type, object Value);
 
     public static T? GetAttributeNamedArgOrConstructorArg<T>(CustomAttribute attribute, string name, int index = -1)
     {
@@ -52,24 +58,35 @@ public static class AttributeParser
         }
     }
 
-    private static object SimplifyObjectValue(object value)
+    private static object SimplifyObjectValue(CAArgument value)
     {
-        switch (value)
+
+        switch (value.Value)
         {
-            case UTF8String utf8String:
-                return Encoding.UTF8.GetString(utf8String.Data);
-            case NonLeafSig nonLeafSig:
-                return nonLeafSig.ReflectionFullName;
-            case LeafSig leafSig:
-                return leafSig.ReflectionFullName;
-            case CAArgument argument:
-                return argument.Type.ReflectionFullName;
             case List<CAArgument> list:
                 {
-                    return list.Select(x => SimplifyObjectValue(x.Value)).ToList();
+                    return list.Select(SimplifyObjectValue).ToList();
                 }
+            case List<CANamedArgument> list:
+                {
+                    return list.Select(x => (Encoding.UTF8.GetString(x.Name.Data), SimplifyObjectValue(x.Argument))).ToList();
+                }
+            case UTF8String utf8String:
+                return new ValueType(value.Type.ReflectionFullName, Encoding.UTF8.GetString(utf8String.Data));
+            case TypeSig type:
+                return type.ReflectionFullName;
         }
-        return value;
+
+        if (value.Type.IsPrimitive || value.Type.IsValueType || SerializeByValueTypes.Contains(value.Type.TypeName))
+        {
+            if (value.Value is CAArgument ca)
+            {
+                return SimplifyObjectValue(ca);
+            }
+            return new ValueType(value.Type.ReflectionFullName, value.Value);
+        }
+
+        return value.Type.ReflectionFullName;
     }
 
     public static SerializedAttribute? ParseNonRoutingAttribute(CustomAttribute attribute)
@@ -80,10 +97,10 @@ public static class AttributeParser
         }
 
 
-        var constructorArguments = attribute.ConstructorArguments.Select((x, i) => (i.ToString(), x.Value)).ToList();
-        var namedArguments = attribute.NamedArguments.Select(x => (Encoding.UTF8.GetString(x.Name.Data), x.Value));
+        var constructorArguments = attribute.ConstructorArguments.Select((x, i) => (i.ToString(), x)).ToList();
+        var namedArguments = attribute.NamedArguments.Select(x => (Encoding.UTF8.GetString(x.Name.Data), x.Argument));
 
-        var allProperties = constructorArguments.Concat(namedArguments).ToDictionary(x => x.Item1, x => SimplifyObjectValue(x.Value));
+        var allProperties = constructorArguments.Concat(namedArguments).ToDictionary(x => x.Item1, x => SimplifyObjectValue(x.Item2));
         return new SerializedAttribute
         {
             Name = attribute.AttributeType.Name,
