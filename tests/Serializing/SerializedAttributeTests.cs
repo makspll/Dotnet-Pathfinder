@@ -56,7 +56,7 @@ public class DummyAttributeCarrier
     [Dummy(null, typeof(byte[]), ["a", "b", "c"], SomeEnum.A, [SomeEnum.A, SomeEnum.B])]
     public void Test5() { }
 
-    [ValueTypeAttribute(1, "test", true, 'a')]
+    [ValueType(1, "test", true, 'a')]
     public void Test6() { }
 
 }
@@ -97,11 +97,11 @@ public class SerializedAttributeTests
         {
             Name = "DummyAttribute",
             Properties = new() {
-                {"0", null!},
+                {"0", new AttributeParser.ValueType("System.String", null!)},
                 {"1", "System.Int32"},
-                {"2", new List<object> { "a", "b", "c" }},
-                {"3", 1},
-                {"4", new List<object> { 1, 2 }}
+                {"2", new List<object> { new AttributeParser.ValueType("System.String","a"), new AttributeParser.ValueType("System.String","b"), new AttributeParser.ValueType("System.String","c") }},
+                {"3", new AttributeParser.ValueType("tests.Serializing.SomeEnum", 1)},
+                {"4", new List<object> { new AttributeParser.ValueType("tests.Serializing.SomeEnum", 1), new AttributeParser.ValueType("tests.Serializing.SomeEnum", 2)}}
             }
         });
         Assert.Equal(expectedSerialized, serialized);
@@ -122,13 +122,12 @@ public class SerializedAttributeTests
         {
             Name = "ValueTypeAttribute",
             Properties = new() {
-                {"0", 1},
-                {"1", "test"},
-                {"2", true},
-                {"3", 'a'}
+                {"0", new AttributeParser.ValueType("System.Int32", 1)},
+                {"1", new AttributeParser.ValueType("System.String", "test")},
+                {"2", new AttributeParser.ValueType("System.Boolean", true)},
+                {"3", new AttributeParser.ValueType("System.Char", 'a')}
             }
         });
-
         Assert.Equal(expectedSerialized, serialized);
     }
 }
