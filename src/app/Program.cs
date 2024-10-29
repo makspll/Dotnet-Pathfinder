@@ -8,9 +8,20 @@ try
     parsedArgs = InputParser.Parse(args);
 
 }
-catch (Exception e)
+catch (Exception)
 {
     Environment.Exit(1);
+}
+
+#if WINDOWS
+ANSIConsole.ANSIInitializer.Init();
+#else 
+ANSIConsole.ANSIInitializer.Enabled = Environment.GetEnvironmentVariable("NO_COLOR") == null;
+#endif 
+
+if (Console.IsOutputRedirected)
+{
+    ANSIConsole.ANSIInitializer.Enabled = false;
 }
 
 Pathfinder pathfinder = new(parsedArgs.DLLGlobs, parsedArgs.Directory, parsedArgs.Config);

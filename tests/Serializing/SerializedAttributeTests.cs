@@ -13,6 +13,11 @@ public enum SomeEnum
     C
 }
 
+public class GenericClass<T>
+{
+    public required T Value { get; set; }
+}
+
 [AttributeUsage(AttributeTargets.Method | AttributeTargets.Class, AllowMultiple = true)]
 public class DummyAttribute(string? Test, Type Type, string[] Array, SomeEnum e, SomeEnum[] enums) : Attribute
 {
@@ -26,11 +31,18 @@ public class DummyAttribute(string? Test, Type Type, string[] Array, SomeEnum e,
 
 public class DummyAttributeCarrier
 {
+
     [Dummy("test", typeof(int), ["a", "b", "c"], SomeEnum.A, [SomeEnum.A, SomeEnum.B])]
     public void Test() { }
 
     [Dummy(null, typeof(int), ["a", "b", "c"], SomeEnum.B, [SomeEnum.B, SomeEnum.C])]
     public void Test2() { }
+
+    [Dummy(null, typeof(List<string>), ["a", "b", "c"], SomeEnum.C, [SomeEnum.C, SomeEnum.A])]
+    public void Test3() { }
+
+    [Dummy(null, typeof(List<GenericClass<int>>), ["a", "b", "c"], SomeEnum.A, [SomeEnum.A, SomeEnum.B])]
+    public void Test4() { }
 }
 
 public class SerializedAttributeTests

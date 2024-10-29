@@ -62,10 +62,10 @@ public static class AttributeParser
         {
             return typeDefOrRef.ReflectionFullName;
         }
-        // else if (value is ValueTypeSig valueType)
-        // {
-        //     return valueType.
-        // }
+        else if (value is GenericInstSig genericSig)
+        {
+            return genericSig.ReflectionFullName;
+        }
         else if (value is List<CAArgument> list)
         {
             return list.Select(x => SimplifyObjectValue(x.Value)).ToList();
