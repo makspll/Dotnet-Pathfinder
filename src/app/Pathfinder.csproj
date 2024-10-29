@@ -10,7 +10,7 @@
 
   <PropertyGroup>
     <PackageId>Makspll.Pathfinder</PackageId>
-    <Version>0.2.2</Version>
+    <Version>0.3.0</Version>
     <Authors>Maksymilian Mozolewski</Authors>
     <Description>CLI used to find all API routes present in a .NET core/framework assembly.</Description>
     <PackageProjectUrl>https://github.com/makspll/Pathfinder</PackageProjectUrl>
