@@ -48,7 +48,7 @@ public class Pathfinder(IEnumerable<string> dllGlobs, string directory, string c
 
             var assembly = new Assembly
             {
-                Name = dll.Split('/').Last(),
+                Name = Path.GetFileNameWithoutExtension(dll),
                 Path = dll,
                 Controllers = controllers,
                 FrameworkVersion = query.DetectedFramework
