@@ -59,10 +59,10 @@ public class Pathfinder(IEnumerable<string> dllGlobs, string directory, string c
         return output;
     }
 
-    public static ParsedPathfinderConfig ParseConfig(FileInfo configFile, FrameworkVersion version)
+    public static ParsedPathfinderConfig? ParseConfig(FileInfo configFile, FrameworkVersion version)
     {
         if (!configFile.Exists)
-            return new();
+            return null;
 
         var config = JsonSerializer.Deserialize<PathfinderConfig>(File.ReadAllText(configFile.FullName));
 
