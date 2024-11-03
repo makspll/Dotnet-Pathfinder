@@ -1,0 +1,89 @@
+<html lang="en" data-bs-theme="dark">
+
+<head>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="bootstrap.css">
+    <link rel="stylesheet" href="dashboard.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Report</title>
+</head>
+
+<body>
+
+    {{> navbar.hbs Title="Report"}}
+    <div class="container-fluid">
+        {{> sidebar.hbs Title="Report" Assemblies=Assemblies }}
+        <main class="col-md-8  ms-sm-auto col-lg-9 px-md-4">
+            {{> header.hbs }}
+            {{#each this.Assemblies}}
+            <h1 id="{{ id }}">{{ this.Name }}</h1>
+            <p class="text-muted ps-0 h3">Assembly</p>
+            {{#each this.Controllers}}
+            <div id="{{ id }}" class=" controller">
+
+                <h3 class="pt-xl-5 pb-0">{{ this.ControllerName }}</h3>
+                <p class="text-muted ps-0 h6">Controller</p>
+                <table class="table table-striped">
+                    <tbody>
+                        <tr>
+                            <td>Class Name</td>
+                            <td><code>{{ this.ControllerName }}</code></td>
+                        </tr>
+                        <tr>
+                            <td>Namespace</td>
+                            <td><code>{{ this.Namespace }}</code></td>
+                        </tr>
+                        <tr>
+                            <td>Number of Actions</td>
+                            <td><code>{{ this.Actions.Count }}</code></td>
+                        </tr>
+                    </tbody>
+                </table>
+                {{#each this.Actions}}
+                <div class="card action">
+                    <div class="card-body">
+                        <h5 id="{{ id }}" class="card-title">
+                            <i class="bi bi-play-circle"></i>
+                            {{this.Name}}
+                        </h5>
+                        <h6 class="card-subtitle text-body-secondary">
+                            {{#if this.IsConventional }}
+                            <small>Conventionally Routed Action</small>
+                            {{else}}
+                            <small>Attribute Routed Action</small>
+                            {{/if}}
+                        </h6>
+                        <div class="card-text">
+                            {{#each this.Routes}}
+                            <li id="{{ id }}">
+                                <code>{{ this.Path }}</code>
+                                <div class="float-end">
+                                    {{#each this.Methods}}
+                                    <span class="badge bg-primary text-end">{{ this }}</span>
+                                    {{/each}}
+                                </div>
+                            </li>
+                            {{/each}}
+                            {{#unless this.Routes.Count}}
+                            <p class="text-muted">No routes present</p>
+                            {{/unless}}
+                        </div>
+                    </div>
+                </div>
+                {{/each}}
+            </div>
+            {{/each}}
+            <hr/>
+            {{/each}}
+        </main>
+    </div>
+    <script>
+        window.Export = {{{ Json }}};
+    </script>
+    <script src="bootstrap.js"></script>
+    <script src="dashboard.js"></script>
+</body>
+
+</html>

@@ -6,7 +6,6 @@ Args? parsedArgs = null;
 try
 {
     parsedArgs = InputParser.Parse(args);
-
 }
 catch (Exception)
 {
@@ -25,8 +24,15 @@ if (Console.IsOutputRedirected)
 }
 
 Pathfinder pathfinder = new(parsedArgs.DLLGlobs, parsedArgs.Directory, parsedArgs.Config);
-var output = pathfinder.Analyze();
 
-using var writer = new StreamWriter(Console.OpenStandardOutput());
-
-Assembly.Serialize(output, parsedArgs.OutputFormat, writer);
+if (parsedArgs.GeneratedReportKind != null)
+{
+    var report = new Report(pathfinder, parsedArgs.GeneratedReportKind.Value, parsedArgs.OutputDirectory, parsedArgs.AdditionalTemplatesDir);
+    report.GenerateReport();
+}
+else
+{
+    var output = pathfinder.Analyze();
+    using var writer = new StreamWriter(Console.OpenStandardOutput());
+    Assembly.Serialize(output, parsedArgs.OutputFormat, writer);
+}
