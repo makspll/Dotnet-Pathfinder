@@ -17,8 +17,8 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref }}
+      with:
+        ref: ${{ github.head_ref }}
 
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v1
