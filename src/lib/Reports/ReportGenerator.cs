@@ -11,11 +11,27 @@ public enum ReportKind
     Endpoint
 }
 
+public static class ReportKindExtensions
+{
+    public static string ToFriendlyString(this ReportKind kind)
+    {
+        return kind switch
+        {
+            ReportKind.RawTemplates => "Raw Templates Report",
+            ReportKind.Endpoint => "Endpoint Report",
+            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
+        };
+    }
+}
+
 
 public class ReportGenerator
 {
+    private ReportKind Kind { get; init; }
+
     public ReportGenerator(ReportKind kind, string? additonalTemplatesDir)
     {
+        Kind = kind;
         SetupHelpers();
 
         if (additonalTemplatesDir != null)
@@ -29,14 +45,14 @@ public class ReportGenerator
                 });
         }
 
-        var templates = FindStaticResources("Resources.Templates");
+        var templates = StaticManager.FindStaticResources("Resources.Templates");
         foreach (var (fileName, resourcePath) in templates)
         {
             // User templates take precedence
             if (Handlebars.Configuration.RegisteredTemplates.ContainsKey(fileName))
                 continue;
 
-            var content = LoadStaticResource(resourcePath);
+            var content = StaticManager.LoadStaticResource(resourcePath);
             Handlebars.RegisterTemplate(fileName, content);
         }
     }
@@ -83,6 +99,9 @@ public class ReportGenerator
         var json = reader.ReadToEnd();
         return new
         {
+            Scripts = string.Join("\n", StaticManager.GenerateScripts()),
+            Styles = string.Join("\n", StaticManager.GenerateStylesheets()),
+            Title = Kind.ToFriendlyString(),
             Assemblies = assemblies,
             Json = json
         };
@@ -98,45 +117,6 @@ public class ReportGenerator
 
         var index = Path.Combine(reportDir, "index.html");
         File.WriteAllText(index, result);
-
-        var staticResources = FindStaticResources("Resources.Static");
-        foreach (var (fileName, resourcePath) in staticResources)
-        {
-            var content = LoadStaticResource(resourcePath);
-            var outputPath = Path.Combine(reportDir, fileName);
-            File.WriteAllText(outputPath, content);
-        }
     }
 
-    private static readonly string RootNamespace = "Makspll.Pathfinder";
-
-    private static string ManifestPathToUri(string path)
-    {
-        var parts = path.Split('.');
-        if (parts.Length == 0)
-        {
-            return path;
-        }
-
-        var extension = parts[^1];
-
-        var filePath = string.Join('/', parts[..^1]);
-        return $"{filePath}.{extension}";
-    }
-
-    private static IEnumerable<(string FileName, string ResourcePath)> FindStaticResources(string prefix)
-    {
-        var fullPrefix = $"{RootNamespace}.{prefix}";
-        return System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceNames()
-            .Where(x => x.StartsWith(fullPrefix))
-            .Select(x => (ManifestPathToUri(x.Replace(fullPrefix + ".", "")), x));
-    }
-
-    private static string LoadStaticResource(string resourcePath)
-    {
-        using var stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream(resourcePath)
-            ?? throw new FileNotFoundException($"Resource {resourcePath} not found");
-        using var reader = new StreamReader(stream);
-        return reader.ReadToEnd();
-    }
 }

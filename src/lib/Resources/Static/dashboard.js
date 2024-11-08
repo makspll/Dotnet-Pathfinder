@@ -9,8 +9,8 @@
             tempLink.href = url;
 
             var fileName = 'assemblies.json';
-            if (window.Export.assemblies.length === 1) {
-                fileName = window.Export.assemblies[0].Name + '.json';
+            if (window.Export.length === 1) {
+                fileName = window.Export[0].Name + '.json';
             }
 
             tempLink.download = fileName;

@@ -25,6 +25,18 @@ jobs:
     - name: Test
       run: dotnet test
 
+    - name: Build Example Reports
+      run: dotnet run --project src/app report **/bin/**/dotnet*.dll -o ./example-report-site --framework net8.0 
+
+    - name: Commit & Push report
+      if: github.ref != 'refs/heads/main'
+      run: |
+        git config --global user.email "automatic@push.com"
+        git config --global user.name "Automatic Push"
+        git add example-report-site
+        git commit -m "Automatic report update"
+        git push
+
   publish-to-nuget:
     name: Package & Publish to NuGet (main)
     needs: build

@@ -2,24 +2,29 @@
 
 <head>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="bootstrap.css">
-    <link rel="stylesheet" href="dashboard.css">
+    {{!-- <link rel="stylesheet" href="bootstrap.css">
+    <link rel="stylesheet" href="dashboard.css"> --}}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>Report</title>
+    <title>{{ Title }}</title>
+
+    {{{~ Styles ~}}}
 </head>
 
 <body>
 
-    {{> navbar.hbs Title="Report"}}
+    {{> navbar.hbs Title=Title}}
     <div class="container-fluid">
-        {{> sidebar.hbs Title="Report" Assemblies=Assemblies }}
+        {{> sidebar.hbs Title=Title Assemblies=Assemblies }}
         <main class="col-md-8  ms-sm-auto col-lg-9 px-md-4">
             {{> header.hbs }}
             {{#each this.Assemblies}}
             <h1 id="{{ id }}">{{ this.Name }}</h1>
-            <p class="text-muted ps-0 h3">Assembly</p>
+            <div class="d-flex align-items-center">
+                <p class="text-muted px-2 h3">Assembly</p>
+                <span class="badge bg-primary">{{ this.FrameworkVersion }}</span>
+            </div>
             {{#each this.Controllers}}
             <div id="{{ id }}" class=" controller">
 
@@ -82,8 +87,9 @@
     <script>
         window.Export = {{{ Json }}};
     </script>
-    <script src="bootstrap.js"></script>
-    <script src="dashboard.js"></script>
+    {{!-- <script src="bootstrap.js"></script>
+    <script src="dashboard.js"></script> --}}
+    {{{ Scripts }}}
 </body>
 
 </html>
