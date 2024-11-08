@@ -1,17 +1,7 @@
-﻿using Makspll.Pathfinder;
+﻿using CommandLine;
+using Makspll.Pathfinder;
 using Makspll.Pathfinder.Routing;
 using Makspll.PathfinderApp;
-
-Args? parsedArgs = null;
-try
-{
-    parsedArgs = InputParser.Parse(args);
-
-}
-catch (Exception)
-{
-    Environment.Exit(1);
-}
 
 #if WINDOWS
 ANSIConsole.ANSIInitializer.Init();
@@ -24,9 +14,27 @@ if (Console.IsOutputRedirected)
     ANSIConsole.ANSIInitializer.Enabled = false;
 }
 
-Pathfinder pathfinder = new(parsedArgs.DLLGlobs, parsedArgs.Directory, parsedArgs.Config);
-var output = pathfinder.Analyze();
+var helpWriter = new HelpWriter(Console.OpenStandardOutput());
 
-using var writer = new StreamWriter(Console.OpenStandardOutput());
+var parser = new Parser(config => config.HelpWriter = helpWriter);
 
-Assembly.Serialize(output, parsedArgs.OutputFormat, writer);
+var exitCode = parser.ParseArguments<AnalyzeOptions, ReportOptions>(args).MapResult(
+    (AnalyzeOptions a) =>
+    {
+        var pathfinder = new Pathfinder(a.DLLGlobs, a.Directory, a.Config);
+        var output = pathfinder.Analyze();
+        using var writer = new StreamWriter(Console.OpenStandardOutput());
+        Assembly.Serialize(output, a.OutputFormat, writer);
+        return 0;
+    },
+    (ReportOptions r) =>
+    {
+        var pathfinder = new Pathfinder(r.DLLGlobs, r.Directory, r.Config);
+        var report = new Report(pathfinder, r.GeneratedReportKind, r.OutputDirectory, r.AdditionalTemplatesDir);
+        report.GenerateReport();
+        return 0;
+    }, _ => 1
+);
+
+helpWriter.Flush();
+return exitCode;

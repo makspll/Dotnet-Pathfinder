@@ -12,6 +12,7 @@ Finds and outputs all API routes found in a .NET assembly in textual or JSON for
 - .NET framework support
 - JSON and Text output
 - Configurable backing lib for projects with custom routing mechanisms
+- Customizable template based report generation (see [report for assemblies in /test_assemblies](https://makspll.github.io/Pathfinder/))
 
 # Installation
 
@@ -23,9 +24,11 @@ Finds and outputs all API routes found in a .NET assembly in textual or JSON for
 
 # Usage
 ```
-pathfinder --help
-dotnet build your-project
-pathfinder **/bin/**/yourdllname.dll -o Text
+pathfinder help
+
+echo "Analyze and report on a dll"
+pathfinder analyze **/bin/**/yourdllname.dll
+pathfinder report **/bin/**/yourdllname.dll
 ```
 
 ![image](https://i.imgur.com/2Oz4HJA.png)

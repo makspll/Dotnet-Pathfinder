@@ -11,9 +11,13 @@ public static class FileSearch
     static IEnumerable<string> AllFilesUnder(string searchRootDir)
     {
         var searchRoot = new DirectoryInfo(searchRootDir);
-        if (!searchRoot.Exists || !searchRoot.Attributes.HasFlag(FileAttributes.Directory))
+        if (!searchRoot.Attributes.HasFlag(FileAttributes.Directory))
         {
-            throw new DirectoryNotFoundException($"Directory not found: {searchRootDir}");
+            throw new DirectoryNotFoundException($"{searchRootDir} is not a directory");
+        }
+        if (!searchRoot.Exists)
+        {
+            yield break;
         }
 
         foreach (var file in searchRoot.GetFiles())

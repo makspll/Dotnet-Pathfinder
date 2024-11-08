@@ -1,12 +1,12 @@
 using System.Runtime.Versioning;
-using System.Security.Cryptography;
-using System.Text.Json.Serialization;
 using dnlib.DotNet;
 using Makspll.Pathfinder.Parsing;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace Makspll.Pathfinder.Routing;
 
-[JsonConverter(typeof(JsonStringEnumConverter))]
+[JsonConverter(typeof(StringEnumConverter))]
 public enum FrameworkVersion
 {
     DOTNET_FRAMEWORK,
