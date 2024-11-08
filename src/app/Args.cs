@@ -51,7 +51,7 @@ class ReportOptions
     [Option('k', "kind", Default = ReportKind.Endpoint, HelpText = "Kind of report to generate. Does not generate reports if not provided", MetaValue = "<RawTemplates|Endpoint>")]
     public ReportKind GeneratedReportKind { get; set; }
 
-    [Option('o', "output-dir", Default = ".", HelpText = "Directory to output the generated report. Will be suffixed with 'report/'", MetaValue = "<directory>")]
+    [Option('o', "output-dir", Default = "./report", HelpText = "Directory to output the generated report.", MetaValue = "<directory>")]
     public required string OutputDirectory { get; set; }
 
     [Option('t', "templates-dir", Default = "./templates", HelpText = "Directory containing additional templates for the generated report", MetaValue = "<directory>")]

@@ -112,7 +112,7 @@ public class ReportGenerator
         var template = Handlebars.Compile("{{> report.hbs }}");
         var context = PrepareContext(assemblies.ToList());
         var result = template(context);
-        var reportDir = Path.Combine(outputDirectory ?? ".", "report");
+        var reportDir = Path.Combine(outputDirectory ?? "./report");
         Directory.CreateDirectory(reportDir);
 
         var index = Path.Combine(reportDir, "index.html");
