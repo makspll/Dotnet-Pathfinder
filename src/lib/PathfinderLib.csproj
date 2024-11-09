@@ -12,7 +12,7 @@
 
   <PropertyGroup>
     <PackageId>Makspll.PathfinderLib</PackageId>
-    <Version>0.4.1</Version>
+    <Version>0.4.2</Version>
     <Authors>Maksymilian Mozolewski</Authors>
     <Description>The library behind the Pathfinder CLI with configurable discovery mechanisms.</Description>
     <PackageProjectUrl>https://github.com/makspll/Pathfinder</PackageProjectUrl>
