@@ -1,7 +1,0 @@
----
-library: false
-warnOnImplicitThis: false
-name: codeqltest
-version: 0.0.1
-dependencies:
-  codeql/csharp-all: ^1.1.0
