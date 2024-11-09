@@ -41,7 +41,7 @@ You can also generate a report based on the analysis using the `report` command:
 pathfinder report **/bin/**/yourdllname.dll
 ```
 
-![image](https://imgur.com/CLpUY3W.png)](https://i.imgur.com/CLpUY3W.png)
+![image](https://i.imgur.com/CLpUY3W.png)
 
 
 # Configuration
