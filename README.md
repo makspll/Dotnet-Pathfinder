@@ -23,15 +23,26 @@ Finds and outputs all API routes found in a .NET assembly in textual or JSON for
 - `dotnet tool install -g Makspll.Pathfinder`
 
 # Usage
-```
-pathfinder help
+Run `pathfinder help` to see all available arguments
 
-echo "Analyze and report on a dll"
+## Analysis
+You can find all available routes in your assemblies using the `analyze` command: 
+
+```
 pathfinder analyze **/bin/**/yourdllname.dll
-pathfinder report **/bin/**/yourdllname.dll
 ```
 
 ![image](https://i.imgur.com/2Oz4HJA.png)
+
+## Report
+You can also generate a report based on the analysis using the `report` command:
+
+```
+pathfinder report **/bin/**/yourdllname.dll
+```
+
+![image](https://imgur.com/CLpUY3W.png)
+
 
 # Configuration
 
