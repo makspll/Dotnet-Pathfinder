@@ -54,6 +54,8 @@ Currently the file needs to specify all your conventional routing configuration 
 ### .NET framework
 In .NET framework projects, you will need to specify whether each of your routes is an MVC or API route. This is done by adding a `Type` field to each route in the config file.
 
+Note MVC conventional routes are normally found in `App_Start/RouteConfig.cs` while WebApi controllers are found in `App_Start/WebApiConfig.cs` the `System.Web.Http` namespace corresponds to WebApi controllers while the `System.Web.Mvc` namespace corresponds to MVC ones.
+
 ```json
 {
     "ConventionalRoutes": [
